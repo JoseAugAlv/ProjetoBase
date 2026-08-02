@@ -1339,3 +1339,69 @@
 .delay-12 { transition-delay: 1.2s; }
 .delay-13 { transition-delay: 1.3s; }
 .delay-14 { transition-delay: 1.4s; }
+
+/* ============================================================ */
+/* BOTÃO GITHUB - ABAIXO DOS CRÉDITOS                         */
+/* ============================================================ */
+
+.btn-github {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 1.2rem;
+    background: #24292e;
+    border: 2px solid #24292e;
+    border-radius: 50px;
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(36, 41, 46, 0.15);
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-github .github-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+.btn-github .github-text {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.btn-github .github-arrow {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+}
+
+.btn-github:hover {
+    background: #1b1f23;
+    border-color: #1b1f23;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px rgba(36, 41, 46, 0.4);
+}
+
+.btn-github:hover .github-arrow {
+    color: #ffffff;
+    transform: translateX(4px);
+}
+
+/* ============================================================ */
+/* ALINHAMENTO CENTRAL DOS BOTÕES                             */
+/* ============================================================ */
+
+.footer-credits,
+.footer-github {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.footer-github {
+    margin-top: 0.8rem;
+}

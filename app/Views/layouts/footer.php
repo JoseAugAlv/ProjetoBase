@@ -34,7 +34,7 @@
                 <ul>
                     <li><a href="mailto:contato@josealvesdev.com"><i class="fas fa-envelope"></i> contato@josealvesdev.com</a></li>
                     <li><a href="https://www.instagram.com/jose.asx_" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-instagram"></i> @jose.asx_</a></li>
-                    <li><a href="https://github.com/josealvesdev" target="_blank" rel="noopener noreferrer"><i class="fab fa-github"></i> GitHub</a></li>
+                    <li><a href="https://github.com/JoseAugAlv" target="_blank" rel="noopener noreferrer"><i class="fab fa-github"></i> GitHub</a></li>
                 </ul>
             </div>
         </div>
