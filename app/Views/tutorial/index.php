@@ -46,7 +46,6 @@ require_once __DIR__ . '/../layouts/nav.php';
                 Guia do Sistema ProjetoBase - Implementação Passo a Passo
             </p>
 
-
             <!-- ============================================================ -->
             <!-- BOTÃO DE CRÉDITOS                                           -->
             <!-- ============================================================ -->
@@ -177,6 +176,46 @@ require_once __DIR__ . '/../layouts/nav.php';
             <a href="#glossario" class="index-item">
                 <span class="index-number">13</span>
                 <span class="index-title">Glossário de Termos</span>
+            </a>
+            <a href="#formularios" class="index-item">
+                <span class="index-number">14</span>
+                <span class="index-title">Formulários - Todos os Tipos de Campo</span>
+            </a>
+            <a href="#tabelas" class="index-item">
+                <span class="index-number">15</span>
+                <span class="index-title">Tabelas e Listagens Avançadas</span>
+            </a>
+            <a href="#relacionamentos" class="index-item">
+                <span class="index-number">16</span>
+                <span class="index-title">Relacionamentos entre Tabelas</span>
+            </a>
+            <a href="#uploads" class="index-item">
+                <span class="index-number">17</span>
+                <span class="index-title">Upload de Arquivos</span>
+            </a>
+            <a href="#fluxo-login" class="index-item">
+                <span class="index-number">18</span>
+                <span class="index-title">Fluxo Completo de Login</span>
+            </a>
+            <a href="#fluxo-cadastro" class="index-item">
+                <span class="index-number">19</span>
+                <span class="index-title">Fluxo Completo de Cadastro</span>
+            </a>
+            <a href="#fluxo-senha" class="index-item">
+                <span class="index-number">20</span>
+                <span class="index-title">Recuperação de Senha</span>
+            </a>
+            <a href="#permissoes-avancadas" class="index-item">
+                <span class="index-number">21</span>
+                <span class="index-title">Permissões Avançadas</span>
+            </a>
+            <a href="#ajax" class="index-item">
+                <span class="index-number">22</span>
+                <span class="index-title">AJAX - Ações sem Recarregar a Página</span>
+            </a>
+            <a href="#seguranca-aplicada" class="index-item">
+                <span class="index-number">23</span>
+                <span class="index-title">Segurança Aplicada no Projeto</span>
             </a>
         </div>
     </div>
@@ -2296,6 +2335,1193 @@ ProjetoBase/
     </div>
 </section>
 
+<!-- ============================================================ -->
+<!-- SEÇÃO 16: FORMULÁRIOS - TODOS OS TIPOS DE CAMPO             -->
+<!-- ============================================================ -->
+<section id="formularios" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-wpforms" style="color: #10b981;"></i>
+                14. Formulários - Todos os Tipos de Campo
+            </h2>
+            <p>Referência completa de campos, validação e boas práticas</p>
+        </div>
+
+        <div class="section-content">
+            <div class="content-block">
+                <h3>Regra de ouro dos formulários</h3>
+                <p>
+                    <strong>Todo</strong> formulário POST no ProjetoBase precisa de 3 coisas:
+                    o campo CSRF, validação no servidor (nunca confie só no HTML5/JS) e
+                    sanitização do que for exibido de volta.
+                </p>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;form</span> <span style="color:#e06c75;">method</span>=<span style="color:#98c379;">"POST"</span> <span style="color:#e06c75;">action</span>=<span style="color:#98c379;">"&lt;?= $basePath ?&gt;/rota/salvar"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;?=</span> <span style="color:#61afef;">ViewHelper</span>::<span style="color:#61afef;">csrfField</span>() <span style="color:#c678dd;">?&gt;</span>  <span style="color:#5c6370;">// 1. Token CSRF sempre</span>
+    ...
+<span style="color:#c678dd;">&lt;/form&gt;</span>
+</pre>
+                </div>
+
+                <h3>Catálogo de campos</h3>
+
+                <h4>1. Texto simples</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;div</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-group"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;label</span> <span style="color:#e06c75;">for</span>=<span style="color:#98c379;">"nome"</span><span style="color:#c678dd;">&gt;</span>Nome <span style="color:#c678dd;">&lt;span</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"required"</span><span style="color:#c678dd;">&gt;</span>*<span style="color:#c678dd;">&lt;/span&gt;&lt;/label&gt;</span>
+    <span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"text"</span> <span style="color:#e06c75;">id</span>=<span style="color:#98c379;">"nome"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"nome"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span>
+           <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"&lt;?= htmlspecialchars($registro['nome'] ?? '') ?&gt;"</span>
+           <span style="color:#e06c75;">maxlength</span>=<span style="color:#98c379;">"150"</span> <span style="color:#e06c75;">required</span><span style="color:#c678dd;">&gt;</span>
+<span style="color:#c678dd;">&lt;/div&gt;</span>
+</pre>
+                </div>
+
+                <h4>2. E-mail</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"email"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"email"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span> <span style="color:#e06c75;">required</span><span style="color:#c678dd;">&gt;</span>
+
+<span style="color:#5c6370;">// No Controller, SEMPRE validar de novo:</span>
+<span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">filter_var</span>(<span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'email'</span>], <span style="color:#e06c75;">FILTER_VALIDATE_EMAIL</span>)) {
+    <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'flash'</span>] = [<span style="color:#98c379;">'tipo'</span> => <span style="color:#98c379;">'erro'</span>, <span style="color:#98c379;">'mensagem'</span> => <span style="color:#98c379;">'E-mail inválido.'</span>];
+    <span style="color:#61afef;">header</span>(<span style="color:#98c379;">'Location: ...'</span>); <span style="color:#c678dd;">exit</span>;
+}
+</pre>
+                </div>
+
+                <h4>3. Senha (com medidor de força)</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"password"</span> <span style="color:#e06c75;">id</span>=<span style="color:#98c379;">"senha"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"senha"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span>
+       <span style="color:#e06c75;">minlength</span>=<span style="color:#98c379;">"8"</span> <span style="color:#e06c75;">required</span> <span style="color:#e06c75;">onkeyup</span>=<span style="color:#98c379;">"atualizarRequisitosSenha()"</span><span style="color:#c678dd;">&gt;</span>
+<span style="color:#c678dd;">&lt;div</span> <span style="color:#e06c75;">id</span>=<span style="color:#98c379;">"requisitos_senha"</span><span style="color:#c678dd;">&gt;&lt;/div&gt;</span>
+
+<span style="color:#5c6370;">// No Controller, use SEMPRE o mesmo validador central:</span>
+<span style="color:#e06c75;">$resultado</span> = <span style="color:#61afef;">SecurityHelper</span>::<span style="color:#61afef;">validarForcaSenha</span>(<span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'senha'</span>]);
+<span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#e06c75;">$resultado</span>[<span style="color:#98c379;">'valida'</span>]) {
+    <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'flash'</span>] = [<span style="color:#98c379;">'tipo'</span>=><span style="color:#98c379;">'erro'</span>,<span style="color:#98c379;">'mensagem'</span>=><span style="color:#61afef;">implode</span>(<span style="color:#98c379;">', '</span>, <span style="color:#e06c75;">$resultado</span>[<span style="color:#98c379;">'erros'</span>])];
+    <span style="color:#c678dd;">exit</span>;
+}
+<span style="color:#e06c75;">$hash</span> = <span style="color:#61afef;">password_hash</span>(<span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'senha'</span>], <span style="color:#e06c75;">PASSWORD_DEFAULT</span>); <span style="color:#5c6370;">// nunca salve em texto plano</span>
+</pre>
+                </div>
+                <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:.75rem 1rem;border-radius:8px;margin:1rem 0;color:#92400e;">
+                    <i class="fas fa-lightbulb" style="color:#d97706;"></i>
+                    Use <code style="background:#fde68a;padding:2px 6px;border-radius:4px;">SecurityHelper::validarForcaSenha()</code> em <strong>todo</strong> lugar que cria/altera senha
+                    (cadastro público, admin criando usuário, usuário editando a própria conta). Ter dois padrões
+                    diferentes de senha no mesmo sistema é uma falha comum.
+                </div>
+
+                <h4>4. Select simples (opções fixas)</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;select</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"status"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;option</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"ativo"</span><span style="color:#c678dd;">&gt;</span>Ativo<span style="color:#c678dd;">&lt;/option&gt;</span>
+    <span style="color:#c678dd;">&lt;option</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"inativo"</span><span style="color:#c678dd;">&gt;</span>Inativo<span style="color:#c678dd;">&lt;/option&gt;</span>
+<span style="color:#c678dd;">&lt;/select&gt;</span>
+</pre>
+                </div>
+
+                <h4>5. Select dinâmico (populado do banco)</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// Controller:</span>
+<span style="color:#e06c75;">$categorias</span> = (<span style="color:#c678dd;">new</span> <span style="color:#61afef;">Categoria</span>())-><span style="color:#61afef;">getAll</span>();
+
+<span style="color:#5c6370;">// View:</span>
+<span style="color:#c678dd;">&lt;select</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"id_categoria"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span> <span style="color:#e06c75;">required</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;option</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">""</span><span style="color:#c678dd;">&gt;</span>Selecione<span style="color:#c678dd;">&lt;/option&gt;</span>
+    <span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">foreach</span> (<span style="color:#e06c75;">$categorias</span> <span style="color:#c678dd;">as</span> <span style="color:#e06c75;">$c</span>)<span style="color:#c678dd;">: ?&gt;</span>
+        <span style="color:#c678dd;">&lt;option</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"&lt;?= $c['id_categoria'] ?&gt;"</span><span style="color:#c678dd;">&gt;</span>
+            <span style="color:#c678dd;">&lt;?=</span> <span style="color:#61afef;">htmlspecialchars</span>(<span style="color:#e06c75;">$c</span>[<span style="color:#98c379;">'nome'</span>]) <span style="color:#c678dd;">?&gt;</span>
+        <span style="color:#c678dd;">&lt;/option&gt;</span>
+    <span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">endforeach;</span> <span style="color:#c678dd;">?&gt;</span>
+<span style="color:#c678dd;">&lt;/select&gt;</span>
+</pre>
+                </div>
+
+                <h4>6. Checkbox único (boolean)</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;label</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"checkbox-label"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"checkbox"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"ativo"</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"1"</span>
+           <span style="color:#c678dd;">&lt;?=</span> <span style="color:#c678dd;">!</span><span style="color:#61afef;">empty</span>(<span style="color:#e06c75;">$registro</span>[<span style="color:#98c379;">'ativo'</span>]) <span style="color:#c678dd;">?</span> <span style="color:#98c379;">'checked'</span> <span style="color:#c678dd;">:</span> <span style="color:#98c379;">''</span> <span style="color:#c678dd;">?&gt;</span><span style="color:#c678dd;">&gt;</span>
+    Ativo
+<span style="color:#c678dd;">&lt;/label&gt;</span>
+
+<span style="color:#5c6370;">// Controller: checkbox desmarcado NÃO vem no $_POST, sempre trate assim:</span>
+<span style="color:#e06c75;">$ativo</span> = <span style="color:#61afef;">isset</span>(<span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'ativo'</span>]) <span style="color:#c678dd;">?</span> <span style="color:#d19a66;">1</span> <span style="color:#c678dd;">:</span> <span style="color:#d19a66;">0</span>;
+</pre>
+                </div>
+
+                <h4>7. Checkbox múltiplo (seleção N:N, ex: tags/permissões)</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">foreach</span> (<span style="color:#e06c75;">$todasAsTags</span> <span style="color:#c678dd;">as</span> <span style="color:#e06c75;">$tag</span>)<span style="color:#c678dd;">: ?&gt;</span>
+    <span style="color:#c678dd;">&lt;label</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"checkbox-label"</span><span style="color:#c678dd;">&gt;</span>
+        <span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"checkbox"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"tags[]"</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"&lt;?= $tag['id'] ?&gt;"</span>
+               <span style="color:#c678dd;">&lt;?=</span> <span style="color:#61afef;">in_array</span>(<span style="color:#e06c75;">$tag</span>[<span style="color:#98c379;">'id'</span>], <span style="color:#e06c75;">$tagsDoRegistro</span>) <span style="color:#c678dd;">?</span> <span style="color:#98c379;">'checked'</span> <span style="color:#c678dd;">:</span> <span style="color:#98c379;">''</span> <span style="color:#c678dd;">?&gt;</span><span style="color:#c678dd;">&gt;</span>
+        <span style="color:#c678dd;">&lt;?=</span> <span style="color:#61afef;">htmlspecialchars</span>(<span style="color:#e06c75;">$tag</span>[<span style="color:#98c379;">'nome'</span>]) <span style="color:#c678dd;">?&gt;</span>
+    <span style="color:#c678dd;">&lt;/label&gt;</span>
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">endforeach;</span> <span style="color:#c678dd;">?&gt;</span>
+
+<span style="color:#5c6370;">// Controller - $_POST['tags'] chega como array:</span>
+<span style="color:#e06c75;">$tags</span> = <span style="color:#61afef;">array_map</span>(<span style="color:#98c379;">'intval'</span>, <span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'tags'</span>] ?? []);
+<span style="color:#5c6370;">// Salva na tabela pivô (ex: registro_tag) apagando e reinserindo:</span>
+<span style="color:#e06c75;">$pdo</span>-><span style="color:#61afef;">prepare</span>(<span style="color:#98c379;">"DELETE FROM registro_tag WHERE id_registro = ?"</span>)-><span style="color:#61afef;">execute</span>([<span style="color:#e06c75;">$id</span>]);
+<span style="color:#c678dd;">foreach</span> (<span style="color:#e06c75;">$tags</span> <span style="color:#c678dd;">as</span> <span style="color:#e06c75;">$idTag</span>) {
+    <span style="color:#e06c75;">$pdo</span>-><span style="color:#61afef;">prepare</span>(<span style="color:#98c379;">"INSERT INTO registro_tag (id_registro, id_tag) VALUES (?, ?)"</span>)
+        -><span style="color:#61afef;">execute</span>([<span style="color:#e06c75;">$id</span>, <span style="color:#e06c75;">$idTag</span>]);
+}
+</pre>
+                </div>
+
+                <h4>8. Radio buttons</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">foreach</span> ([<span style="color:#98c379;">'P'</span>=><span style="color:#98c379;">'Pequeno'</span>,<span style="color:#98c379;">'M'</span>=><span style="color:#98c379;">'Médio'</span>,<span style="color:#98c379;">'G'</span>=><span style="color:#98c379;">'Grande'</span>] <span style="color:#c678dd;">as</span> <span style="color:#e06c75;">$valor</span> => <span style="color:#e06c75;">$label</span>)<span style="color:#c678dd;">: ?&gt;</span>
+    <span style="color:#c678dd;">&lt;label</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"radio-label"</span><span style="color:#c678dd;">&gt;</span>
+        <span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"radio"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"tamanho"</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"&lt;?= $valor ?&gt;"</span>
+               <span style="color:#c678dd;">&lt;?=</span> (<span style="color:#e06c75;">$registro</span>[<span style="color:#98c379;">'tamanho'</span>] ?? <span style="color:#98c379;">''</span>) === <span style="color:#e06c75;">$valor</span> <span style="color:#c678dd;">?</span> <span style="color:#98c379;">'checked'</span> <span style="color:#c678dd;">:</span> <span style="color:#98c379;">''</span> <span style="color:#c678dd;">?&gt;</span><span style="color:#c678dd;">&gt;</span>
+        <span style="color:#c678dd;">&lt;?=</span> <span style="color:#e06c75;">$label</span> <span style="color:#c678dd;">?&gt;</span>
+    <span style="color:#c678dd;">&lt;/label&gt;</span>
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">endforeach;</span> <span style="color:#c678dd;">?&gt;</span>
+</pre>
+                </div>
+
+                <h4>9. Textarea</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;textarea</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"descricao"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span> <span style="color:#e06c75;">rows</span>=<span style="color:#98c379;">"5"</span> <span style="color:#e06c75;">maxlength</span>=<span style="color:#98c379;">"2000"</span><span style="color:#c678dd;">&gt;</span><span style="color:#c678dd;">&lt;?=</span>
+    <span style="color:#61afef;">htmlspecialchars</span>(<span style="color:#e06c75;">$registro</span>[<span style="color:#98c379;">'descricao'</span>] ?? <span style="color:#98c379;">''</span>)
+<span style="color:#c678dd;">?&gt;&lt;/textarea&gt;</span>
+</pre>
+                </div>
+
+                <h4>10. Data / Data e Hora</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"date"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"data_nascimento"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span>
+       <span style="color:#e06c75;">max</span>=<span style="color:#98c379;">"&lt;?= date('Y-m-d') ?&gt;"</span><span style="color:#c678dd;">&gt;</span>  <span style="color:#5c6370;">// impede data futura</span>
+
+<span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"datetime-local"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"data_evento"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span><span style="color:#c678dd;">&gt;</span>
+
+<span style="color:#5c6370;">// Controller - sempre valide se é uma data real antes de salvar:</span>
+<span style="color:#e06c75;">$data</span> = <span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'data_nascimento'</span>] ?? <span style="color:#98c379;">''</span>;
+<span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$data</span> && <span style="color:#c678dd;">!</span><span style="color:#61afef;">DateTime</span>::<span style="color:#61afef;">createFromFormat</span>(<span style="color:#98c379;">'Y-m-d'</span>, <span style="color:#e06c75;">$data</span>)) {
+    <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'flash'</span>] = [<span style="color:#98c379;">'tipo'</span>=><span style="color:#98c379;">'erro'</span>,<span style="color:#98c379;">'mensagem'</span>=><span style="color:#98c379;">'Data inválida.'</span>];
+    <span style="color:#c678dd;">exit</span>;
+}
+</pre>
+                </div>
+
+                <h4>11. Números / Moeda</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"number"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"quantidade"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span> <span style="color:#e06c75;">min</span>=<span style="color:#98c379;">"0"</span> <span style="color:#e06c75;">step</span>=<span style="color:#98c379;">"1"</span><span style="color:#c678dd;">&gt;</span>
+<span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"number"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"preco"</span> <span style="color:#e06c75;">class</span>=<span style="color:#98c379;">"form-control"</span> <span style="color:#e06c75;">min</span>=<span style="color:#98c379;">"0"</span> <span style="color:#e06c75;">step</span>=<span style="color:#98c379;">"0.01"</span><span style="color:#c678dd;">&gt;</span>
+
+<span style="color:#5c6370;">// Controller - sempre force o tipo, nunca confie no que veio do POST:</span>
+<span style="color:#e06c75;">$preco</span> = (<span style="color:#c678dd;">float</span>) <span style="color:#61afef;">str_replace</span>(<span style="color:#98c379;">','</span>, <span style="color:#98c379;">'.'</span>, <span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'preco'</span>] ?? <span style="color:#d19a66;">0</span>);
+<span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$preco</span> < <span style="color:#d19a66;">0</span>) { <span style="color:#5c6370;">/* rejeita */</span> }
+</pre>
+                </div>
+
+                <h4>12. Campo oculto (hidden) - usado para IDs em edição</h4>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"hidden"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"id_registro"</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"&lt;?= $registro['id_registro'] ?&gt;"</span><span style="color:#c678dd;">&gt;</span>
+<span style="color:#5c6370;">// Nunca confie cegamente: no controller, revalide se o usuário tem</span>
+<span style="color:#5c6370;">// permissão sobre ESSE id específico (ver seção "Permissões Avançadas")</span>
+</pre>
+                </div>
+
+                <h3>Validação: 3 camadas, nessa ordem de confiança</h3>
+                <div class="table-wrapper" style="overflow-x:auto;">
+                    <table class="feature-table" style="width:100%;border-collapse:collapse;font-size:14px;">
+                        <thead>
+                            <tr style="background:#f1f5f9;">
+                                <th style="padding:10px 16px;text-align:left;border:1px solid #e2e8f0;">Camada</th>
+                                <th style="padding:10px 16px;text-align:left;border:1px solid #e2e8f0;">Onde</th>
+                                <th style="padding:10px 16px;text-align:left;border:1px solid #e2e8f0;">Serve para</th>
+                                <th style="padding:10px 16px;text-align:left;border:1px solid #e2e8f0;">Confiável?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>HTML5</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>required</code>, <code>type</code>, <code>maxlength</code></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">UX rápida</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#ef4444;">❌ Não</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>JavaScript</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">onkeyup / onsubmit</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Feedback em tempo real</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#ef4444;">❌ Não</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong style="color:#10b981;">PHP (servidor)</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Controller</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Segurança real</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#10b981;">✅ Sim, sempre</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="margin-top:1rem;color:#64748b;">
+                    Qualquer um pode desabilitar o JS ou enviar um POST direto via Postman/cURL —
+                    por isso a validação do PHP é a <strong>única</strong> que importa para segurança.
+                    As outras duas são só conveniência.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO 17: TABELAS E LISTAGENS AVANÇADAS                     -->
+<!-- ============================================================ -->
+<section id="tabelas" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-table-list" style="color: #3b82f6;"></i>
+                15. Tabelas e Listagens Avançadas
+            </h2>
+            <p>Busca, múltiplos filtros, ordenação por coluna e exportação</p>
+        </div>
+
+        <div class="section-content">
+            <div class="content-block">
+
+                <h3>1. Busca simples (já existe no CrudController)</h3>
+                <p>O <code>CrudController::getList()</code> já busca em <code>$searchFields</code>. Para personalizar em um Controller específico:</p>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">protected</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">getList</span>(<span style="color:#e06c75;">$limit</span>, <span style="color:#e06c75;">$offset</span>, <span style="color:#e06c75;">$busca</span> = <span style="color:#98c379;">''</span>) {
+    <span style="color:#e06c75;">$sql</span> = <span style="color:#98c379;">"SELECT p.*, c.nome as categoria_nome
+            FROM produto p
+            LEFT JOIN categoria c ON p.id_categoria = c.id_categoria
+            WHERE 1=1"</span>;
+    <span style="color:#e06c75;">$params</span> = [];
+
+    <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">empty</span>(<span style="color:#e06c75;">$busca</span>)) {
+        <span style="color:#e06c75;">$sql</span> .= <span style="color:#98c379;">" AND (p.nome LIKE ? OR p.descricao LIKE ?)"</span>;
+        <span style="color:#e06c75;">$params</span>[] = <span style="color:#98c379;">"%$busca%"</span>;
+        <span style="color:#e06c75;">$params</span>[] = <span style="color:#98c379;">"%$busca%"</span>;
+    }
+    <span style="color:#e06c75;">$sql</span> .= <span style="color:#98c379;">" ORDER BY p.nome ASC LIMIT ? OFFSET ?"</span>;
+    <span style="color:#e06c75;">$params</span>[] = <span style="color:#e06c75;">$limit</span>; <span style="color:#e06c75;">$params</span>[] = <span style="color:#e06c75;">$offset</span>;
+
+    <span style="color:#e06c75;">$stmt</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">model</span>-><span style="color:#e06c75;">conn</span>-><span style="color:#61afef;">prepare</span>(<span style="color:#e06c75;">$sql</span>);
+    <span style="color:#e06c75;">$stmt</span>-><span style="color:#61afef;">execute</span>(<span style="color:#e06c75;">$params</span>);
+    <span style="color:#c678dd;">return</span> <span style="color:#e06c75;">$stmt</span>-><span style="color:#61afef;">fetchAll</span>(<span style="color:#e06c75;">PDO</span>::<span style="color:#e06c75;">FETCH_ASSOC</span>);
+}
+</pre>
+                </div>
+
+                <h3>2. Múltiplos filtros (categoria + status + faixa de data)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// Controller:</span>
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">index</span>() {
+    <span style="color:#e06c75;">$filtros</span> = [
+        <span style="color:#98c379;">'categoria'</span> => <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'categoria'</span>] ?? <span style="color:#98c379;">''</span>,
+        <span style="color:#98c379;">'status'</span>    => <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'status'</span>] ?? <span style="color:#98c379;">''</span>,
+        <span style="color:#98c379;">'data_de'</span>   => <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'data_de'</span>] ?? <span style="color:#98c379;">''</span>,
+        <span style="color:#98c379;">'data_ate'</span>  => <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'data_ate'</span>] ?? <span style="color:#98c379;">''</span>,
+    ];
+    <span style="color:#e06c75;">$produtos</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#61afef;">buscarComFiltros</span>(<span style="color:#e06c75;">$filtros</span>);
+    <span style="color:#c678dd;">require</span> <span style="color:#98c379;">'../app/Views/produtos/index.php'</span>;
+}
+
+<span style="color:#c678dd;">private</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">buscarComFiltros</span>(<span style="color:#e06c75;">$f</span>) {
+    <span style="color:#e06c75;">$sql</span> = <span style="color:#98c379;">"SELECT * FROM produto WHERE 1=1"</span>;
+    <span style="color:#e06c75;">$params</span> = [];
+
+    <span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$f</span>[<span style="color:#98c379;">'categoria'</span>] !== <span style="color:#98c379;">''</span>) { <span style="color:#e06c75;">$sql</span> .= <span style="color:#98c379;">" AND id_categoria = ?"</span>; <span style="color:#e06c75;">$params</span>[] = <span style="color:#e06c75;">$f</span>[<span style="color:#98c379;">'categoria'</span>]; }
+    <span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$f</span>[<span style="color:#98c379;">'status'</span>] !== <span style="color:#98c379;">''</span>)    { <span style="color:#e06c75;">$sql</span> .= <span style="color:#98c379;">" AND status = ?"</span>;       <span style="color:#e06c75;">$params</span>[] = <span style="color:#e06c75;">$f</span>[<span style="color:#98c379;">'status'</span>]; }
+    <span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$f</span>[<span style="color:#98c379;">'data_de'</span>] !== <span style="color:#98c379;">''</span>)   { <span style="color:#e06c75;">$sql</span> .= <span style="color:#98c379;">" AND data_criacao >= ?"</span>; <span style="color:#e06c75;">$params</span>[] = <span style="color:#e06c75;">$f</span>[<span style="color:#98c379;">'data_de'</span>]; }
+    <span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$f</span>[<span style="color:#98c379;">'data_ate'</span>] !== <span style="color:#98c379;">''</span>)  { <span style="color:#e06c75;">$sql</span> .= <span style="color:#98c379;">" AND data_criacao <= ?"</span>; <span style="color:#e06c75;">$params</span>[] = <span style="color:#e06c75;">$f</span>[<span style="color:#98c379;">'data_ate'</span>] . <span style="color:#98c379;">' 23:59:59'</span>; }
+
+    <span style="color:#e06c75;">$stmt</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">model</span>-><span style="color:#e06c75;">conn</span>-><span style="color:#61afef;">prepare</span>(<span style="color:#e06c75;">$sql</span>);
+    <span style="color:#e06c75;">$stmt</span>-><span style="color:#61afef;">execute</span>(<span style="color:#e06c75;">$params</span>);
+    <span style="color:#c678dd;">return</span> <span style="color:#e06c75;">$stmt</span>-><span style="color:#61afef;">fetchAll</span>(<span style="color:#e06c75;">PDO</span>::<span style="color:#e06c75;">FETCH_ASSOC</span>);
+}
+</pre>
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// View - formulário de filtros (GET, não POST, para poder compartilhar o link):</span>
+<span style="color:#c678dd;">&lt;form</span> <span style="color:#e06c75;">method</span>=<span style="color:#98c379;">"GET"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;select</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"categoria"</span><span style="color:#c678dd;">&gt;</span>...<span style="color:#c678dd;">&lt;/select&gt;</span>
+    <span style="color:#c678dd;">&lt;select</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"status"</span><span style="color:#c678dd;">&gt;</span>
+        <span style="color:#c678dd;">&lt;option</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">""</span><span style="color:#c678dd;">&gt;</span>Todos<span style="color:#c678dd;">&lt;/option&gt;</span>
+        <span style="color:#c678dd;">&lt;option</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"ativo"</span> <span style="color:#c678dd;">&lt;?=</span> <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'status'</span>]==<span style="color:#98c379;">'ativo'</span><span style="color:#c678dd;">?</span><span style="color:#98c379;">'selected'</span><span style="color:#c678dd;">:''</span> <span style="color:#c678dd;">?&gt;&gt;</span>Ativo<span style="color:#c678dd;">&lt;/option&gt;</span>
+    <span style="color:#c678dd;">&lt;/select&gt;</span>
+    <span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"date"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"data_de"</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"&lt;?= htmlspecialchars($_GET['data_de'] ?? '') ?&gt;"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"date"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"data_ate"</span> <span style="color:#e06c75;">value</span>=<span style="color:#98c379;">"&lt;?= htmlspecialchars($_GET['data_ate'] ?? '') ?&gt;"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;button</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"submit"</span><span style="color:#c678dd;">&gt;</span>Filtrar<span style="color:#c678dd;">&lt;/button&gt;</span>
+<span style="color:#c678dd;">&lt;/form&gt;</span>
+</pre>
+                </div>
+
+                <h3>3. Ordenação clicável por coluna (com whitelist de segurança)</h3>
+                <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:.75rem 1rem;border-radius:8px;margin:1rem 0;color:#92400e;">
+                    <i class="fas fa-shield-alt" style="color:#d97706;"></i>
+                    <strong>Nunca</strong> interpole <code>$_GET['ordenar']</code> direto no SQL — valide contra
+                    uma lista de colunas permitidas, senão vira uma brecha de SQL Injection.
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#e06c75;">$colunasPermitidas</span> = [<span style="color:#98c379;">'nome'</span>, <span style="color:#98c379;">'preco'</span>, <span style="color:#98c379;">'data_criacao'</span>];
+<span style="color:#e06c75;">$ordenarPor</span> = <span style="color:#61afef;">in_array</span>(<span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'ordenar'</span>] ?? <span style="color:#98c379;">''</span>, <span style="color:#e06c75;">$colunasPermitidas</span>) <span style="color:#c678dd;">?</span> <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'ordenar'</span>] <span style="color:#c678dd;">:</span> <span style="color:#98c379;">'nome'</span>;
+<span style="color:#e06c75;">$direcao</span> = (<span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'direcao'</span>] ?? <span style="color:#98c379;">'ASC'</span>) === <span style="color:#98c379;">'DESC'</span> <span style="color:#c678dd;">?</span> <span style="color:#98c379;">'DESC'</span> <span style="color:#c678dd;">:</span> <span style="color:#98c379;">'ASC'</span>;
+
+<span style="color:#e06c75;">$sql</span> = <span style="color:#98c379;">"SELECT * FROM produto ORDER BY {$ordenarPor} {$direcao}"</span>;
+</pre>
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// View - cabeçalho clicável:</span>
+<span style="color:#c678dd;">&lt;th&gt;</span>
+    <span style="color:#c678dd;">&lt;a</span> <span style="color:#e06c75;">href</span>=<span style="color:#98c379;">"?ordenar=preco&amp;direcao=&lt;?= $direcao=='ASC'?'DESC':'ASC' ?&gt;"</span><span style="color:#c678dd;">&gt;</span>
+        Preço <span style="color:#c678dd;">&lt;?=</span> <span style="color:#e06c75;">$ordenarPor</span>==<span style="color:#98c379;">'preco'</span> <span style="color:#c678dd;">?</span> (<span style="color:#e06c75;">$direcao</span>==<span style="color:#98c379;">'ASC'</span><span style="color:#c678dd;">?</span><span style="color:#98c379;">'▲'</span><span style="color:#c678dd;">:</span><span style="color:#98c379;">'▼'</span>) <span style="color:#c678dd;">:</span> <span style="color:#98c379;">''</span> <span style="color:#c678dd;">?&gt;</span>
+    <span style="color:#c678dd;">&lt;/a&gt;</span>
+<span style="color:#c678dd;">&lt;/th&gt;</span>
+</pre>
+                </div>
+
+                <h3>4. Tabela com totalizadores (soma, média)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#e06c75;">$resumo</span> = <span style="color:#e06c75;">$pdo</span>-><span style="color:#61afef;">query</span>(<span style="color:#98c379;">"
+    SELECT COUNT(*) as total, SUM(preco * quantidade) as valor_total,
+           AVG(preco) as preco_medio
+    FROM produto WHERE ativo = 1
+"</span>)-><span style="color:#61afef;">fetch</span>(<span style="color:#e06c75;">PDO</span>::<span style="color:#e06c75;">FETCH_ASSOC</span>);
+<span style="color:#5c6370;">// $resumo['valor_total'], $resumo['preco_medio'] -&gt; exiba no topo da tabela</span>
+</pre>
+                </div>
+
+                <h3>5. Paginação combinada com filtros (mantendo o estado na URL)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// PaginationHelper::render já aceita $params extras para não perder os filtros:</span>
+<span style="color:#e06c75;">$paginationHtml</span> = <span style="color:#61afef;">PaginationHelper</span>::<span style="color:#61afef;">render</span>(
+    <span style="color:#61afef;">App</span>::<span style="color:#61afef;">getBasePath</span>() . <span style="color:#98c379;">'/produtos'</span>,
+    <span style="color:#e06c75;">$pagina</span>,
+    <span style="color:#e06c75;">$totalPaginas</span>,
+    [<span style="color:#98c379;">'categoria'</span> => <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'categoria'</span>] ?? <span style="color:#98c379;">''</span>, <span style="color:#98c379;">'status'</span> => <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'status'</span>] ?? <span style="color:#98c379;">''</span>]
+);
+</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO 18: RELACIONAMENTOS ENTRE TABELAS                     -->
+<!-- ============================================================ -->
+<section id="relacionamentos" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-diagram-project" style="color: #ec4899;"></i>
+                16. Relacionamentos entre Tabelas
+            </h2>
+            <p>1:N, N:N e como exibir dados relacionados nas Views</p>
+        </div>
+
+        <div class="section-content">
+            <div class="content-block">
+
+                <h3>Relação 1:N (um Cliente tem vários Pedidos)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">-- Schema:</span>
+<span style="color:#c678dd;">CREATE TABLE</span> <span style="color:#61afef;">cliente</span> (
+    <span style="color:#e06c75;">id_cliente</span> <span style="color:#c678dd;">INT PRIMARY KEY AUTO_INCREMENT</span>,
+    <span style="color:#e06c75;">nome</span> <span style="color:#c678dd;">VARCHAR(150)</span>
+);
+<span style="color:#c678dd;">CREATE TABLE</span> <span style="color:#61afef;">pedido</span> (
+    <span style="color:#e06c75;">id_pedido</span> <span style="color:#c678dd;">INT PRIMARY KEY AUTO_INCREMENT</span>,
+    <span style="color:#e06c75;">id_cliente</span> <span style="color:#c678dd;">INT NOT NULL</span>,
+    <span style="color:#e06c75;">total</span> <span style="color:#c678dd;">DECIMAL(10,2)</span>,
+    <span style="color:#c678dd;">FOREIGN KEY</span> (<span style="color:#e06c75;">id_cliente</span>) <span style="color:#c678dd;">REFERENCES</span> <span style="color:#61afef;">cliente</span>(<span style="color:#e06c75;">id_cliente</span>)
+);
+</pre>
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// Model Pedido - listar com nome do cliente (JOIN):</span>
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">getComCliente</span>() {
+    <span style="color:#e06c75;">$sql</span> = <span style="color:#98c379;">"SELECT p.*, c.nome as cliente_nome
+            FROM pedido p
+            INNER JOIN cliente c ON p.id_cliente = c.id_cliente
+            ORDER BY p.id_pedido DESC"</span>;
+    <span style="color:#c678dd;">return</span> <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">conn</span>-><span style="color:#61afef;">query</span>(<span style="color:#e06c75;">$sql</span>)-><span style="color:#61afef;">fetchAll</span>(<span style="color:#e06c75;">PDO</span>::<span style="color:#e06c75;">FETCH_ASSOC</span>);
+}
+
+<span style="color:#5c6370;">// Ver todos os pedidos DE UM cliente específico:</span>
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">getPorCliente</span>(<span style="color:#e06c75;">$idCliente</span>) {
+    <span style="color:#e06c75;">$stmt</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">conn</span>-><span style="color:#61afef;">prepare</span>(<span style="color:#98c379;">"SELECT * FROM pedido WHERE id_cliente = ?"</span>);
+    <span style="color:#e06c75;">$stmt</span>-><span style="color:#61afef;">execute</span>([<span style="color:#e06c75;">$idCliente</span>]);
+    <span style="color:#c678dd;">return</span> <span style="color:#e06c75;">$stmt</span>-><span style="color:#61afef;">fetchAll</span>(<span style="color:#e06c75;">PDO</span>::<span style="color:#e06c75;">FETCH_ASSOC</span>);
+}
+</pre>
+                </div>
+
+                <h3>Relação N:N (Produto tem várias Tags, Tag pertence a vários Produtos)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">-- Schema com tabela pivô:</span>
+<span style="color:#c678dd;">CREATE TABLE</span> <span style="color:#61afef;">produto_tag</span> (
+    <span style="color:#e06c75;">id_produto</span> <span style="color:#c678dd;">INT NOT NULL</span>,
+    <span style="color:#e06c75;">id_tag</span> <span style="color:#c678dd;">INT NOT NULL</span>,
+    <span style="color:#c678dd;">PRIMARY KEY</span> (<span style="color:#e06c75;">id_produto</span>, <span style="color:#e06c75;">id_tag</span>),
+    <span style="color:#c678dd;">FOREIGN KEY</span> (<span style="color:#e06c75;">id_produto</span>) <span style="color:#c678dd;">REFERENCES</span> <span style="color:#61afef;">produto</span>(<span style="color:#e06c75;">id_produto</span>) <span style="color:#c678dd;">ON DELETE CASCADE</span>,
+    <span style="color:#c678dd;">FOREIGN KEY</span> (<span style="color:#e06c75;">id_tag</span>) <span style="color:#c678dd;">REFERENCES</span> <span style="color:#61afef;">tag</span>(<span style="color:#e06c75;">id_tag</span>) <span style="color:#c678dd;">ON DELETE CASCADE</span>
+);
+</pre>
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// Buscar produto com todas as suas tags (GROUP_CONCAT):</span>
+<span style="color:#e06c75;">$sql</span> = <span style="color:#98c379;">"SELECT p.*, GROUP_CONCAT(t.nome SEPARATOR ', ') as tags
+        FROM produto p
+        LEFT JOIN produto_tag pt ON p.id_produto = pt.id_produto
+        LEFT JOIN tag t ON pt.id_tag = t.id_tag
+        GROUP BY p.id_produto"</span>;
+</pre>
+                </div>
+
+                <h3>Exibindo dados relacionados na View (detalhe + itens filhos)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// Controller:</span>
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">detalhe</span>() {
+    <span style="color:#e06c75;">$id</span> = (<span style="color:#c678dd;">int</span>) <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'id'</span>];
+    <span style="color:#e06c75;">$cliente</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">clienteModel</span>-><span style="color:#61afef;">find</span>(<span style="color:#e06c75;">$id</span>, <span style="color:#98c379;">'id_cliente'</span>);
+    <span style="color:#e06c75;">$pedidos</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">pedidoModel</span>-><span style="color:#61afef;">getPorCliente</span>(<span style="color:#e06c75;">$id</span>);
+    <span style="color:#c678dd;">require</span> <span style="color:#98c379;">'../app/Views/clientes/detalhe.php'</span>;
+}
+
+<span style="color:#5c6370;">// View clientes/detalhe.php:</span>
+<span style="color:#c678dd;">&lt;h2&gt;&lt;?=</span> <span style="color:#61afef;">htmlspecialchars</span>(<span style="color:#e06c75;">$cliente</span>[<span style="color:#98c379;">'nome'</span>]) <span style="color:#c678dd;">?&gt;&lt;/h2&gt;</span>
+<span style="color:#c678dd;">&lt;h3&gt;</span>Pedidos (<span style="color:#c678dd;">&lt;?=</span> <span style="color:#61afef;">count</span>(<span style="color:#e06c75;">$pedidos</span>) <span style="color:#c678dd;">?&gt;</span>)<span style="color:#c678dd;">&lt;/h3&gt;</span>
+<span style="color:#c678dd;">&lt;table&gt;</span>
+    <span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">foreach</span> (<span style="color:#e06c75;">$pedidos</span> <span style="color:#c678dd;">as</span> <span style="color:#e06c75;">$p</span>)<span style="color:#c678dd;">: ?&gt;</span>
+        <span style="color:#c678dd;">&lt;tr&gt;</span>
+            <span style="color:#c678dd;">&lt;td&gt;</span>#<span style="color:#c678dd;">&lt;?=</span> <span style="color:#e06c75;">$p</span>[<span style="color:#98c379;">'id_pedido'</span>] <span style="color:#c678dd;">?&gt;&lt;/td&gt;</span>
+            <span style="color:#c678dd;">&lt;td&gt;</span>R$ <span style="color:#c678dd;">&lt;?=</span> <span style="color:#61afef;">number_format</span>(<span style="color:#e06c75;">$p</span>[<span style="color:#98c379;">'total'</span>], <span style="color:#d19a66;">2</span>, <span style="color:#98c379;">','</span>, <span style="color:#98c379;">'.'</span>) <span style="color:#c678dd;">?&gt;&lt;/td&gt;</span>
+        <span style="color:#c678dd;">&lt;/tr&gt;</span>
+    <span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">endforeach;</span> <span style="color:#c678dd;">?&gt;</span>
+<span style="color:#c678dd;">&lt;/table&gt;</span>
+</pre>
+                </div>
+                <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:.75rem 1rem;border-radius:8px;margin:1rem 0;color:#92400e;">
+                    <i class="fas fa-shield-alt" style="color:#d97706;"></i>
+                    Ao excluir um registro "pai" (ex: cliente), decida explicitamente o que
+                    acontece com os "filhos" (pedidos): <code style="background:#fde68a;padding:2px 6px;border-radius:4px;">ON DELETE CASCADE</code> apaga junto,
+                    <code style="background:#fde68a;padding:2px 6px;border-radius:4px;">ON DELETE RESTRICT</code> (padrão) impede a exclusão se houver filhos,
+                    <code style="background:#fde68a;padding:2px 6px;border-radius:4px;">ON DELETE SET NULL</code> desvincula. Escolha conscientemente por tabela.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO 19: UPLOAD DE ARQUIVOS                                -->
+<!-- ============================================================ -->
+<section id="uploads" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-file-arrow-up" style="color: #f59e0b;"></i>
+                17. Upload de Arquivos
+            </h2>
+            <p>Do formulário até a validação segura com UploadHelper</p>
+        </div>
+
+        <div class="section-content">
+            <div class="content-block">
+
+                <h3>1. Formulário (nunca esqueça o enctype)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;form</span> <span style="color:#e06c75;">method</span>=<span style="color:#98c379;">"POST"</span> <span style="color:#e06c75;">action</span>=<span style="color:#98c379;">"&lt;?= $basePath ?&gt;/produtos/salvar"</span>
+      <span style="color:#e06c75;">enctype</span>=<span style="color:#98c379;">"multipart/form-data"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;?=</span> <span style="color:#61afef;">ViewHelper</span>::<span style="color:#61afef;">csrfField</span>() <span style="color:#c678dd;">?&gt;</span>
+    <span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"file"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"imagem"</span> <span style="color:#e06c75;">accept</span>=<span style="color:#98c379;">"image/png,image/jpeg,image/webp"</span><span style="color:#c678dd;">&gt;</span>
+    <span style="color:#c678dd;">&lt;button</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"submit"</span><span style="color:#c678dd;">&gt;</span>Salvar<span style="color:#c678dd;">&lt;/button&gt;</span>
+<span style="color:#c678dd;">&lt;/form&gt;</span>
+</pre>
+                </div>
+
+                <h3>2. Controller - usando o UploadHelper (já valida MIME real, não só extensão)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">salvar</span>() {
+    <span style="color:#61afef;">CsrfMiddleware</span>::<span style="color:#61afef;">validate</span>();
+
+    <span style="color:#e06c75;">$caminhoImagem</span> = <span style="color:#c678dd;">null</span>;
+    <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">empty</span>(<span style="color:#e06c75;">$_FILES</span>[<span style="color:#98c379;">'imagem'</span>][<span style="color:#98c379;">'name'</span>])) {
+        <span style="color:#e06c75;">$resultado</span> = <span style="color:#61afef;">UploadHelper</span>::<span style="color:#61afef;">upload</span>(
+            <span style="color:#e06c75;">$_FILES</span>[<span style="color:#98c379;">'imagem'</span>],
+            <span style="color:#98c379;">'uploads/produtos'</span>,              <span style="color:#5c6370;">// subpasta dentro de public/</span>
+            [<span style="color:#98c379;">'jpg'</span>, <span style="color:#98c379;">'jpeg'</span>, <span style="color:#98c379;">'png'</span>, <span style="color:#98c379;">'webp'</span>],   <span style="color:#5c6370;">// extensões permitidas</span>
+            <span style="color:#d19a66;">2097152</span>                            <span style="color:#5c6370;">// 2MB máximo</span>
+        );
+
+        <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#e06c75;">$resultado</span>[<span style="color:#98c379;">'success'</span>]) {
+            <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'flash'</span>] = [<span style="color:#98c379;">'tipo'</span> => <span style="color:#98c379;">'erro'</span>, <span style="color:#98c379;">'mensagem'</span> => <span style="color:#e06c75;">$resultado</span>[<span style="color:#98c379;">'message'</span>]];
+            <span style="color:#61afef;">header</span>(<span style="color:#98c379;">'Location: ' . App::getBasePath() . '/produtos/criar'</span>);
+            <span style="color:#c678dd;">exit</span>;
+        }
+        <span style="color:#e06c75;">$caminhoImagem</span> = <span style="color:#e06c75;">$resultado</span>[<span style="color:#98c379;">'arquivo'</span>]; <span style="color:#5c6370;">// ex: uploads/produtos/xxx.jpg</span>
+    }
+
+    <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">model</span>-><span style="color:#61afef;">insert</span>([
+        <span style="color:#98c379;">'nome'</span> => <span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'nome'</span>],
+        <span style="color:#98c379;">'imagem'</span> => <span style="color:#e06c75;">$caminhoImagem</span>,
+    ]);
+}
+</pre>
+                </div>
+
+                <h3>3. Exibindo a imagem salva</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">empty</span>(<span style="color:#e06c75;">$produto</span>[<span style="color:#98c379;">'imagem'</span>]))<span style="color:#c678dd;">: ?&gt;</span>
+    <span style="color:#c678dd;">&lt;img</span> <span style="color:#e06c75;">src</span>=<span style="color:#98c379;">"&lt;?= $basePath ?&gt;/public/&lt;?= htmlspecialchars($produto['imagem']) ?&gt;"</span>
+         <span style="color:#e06c75;">alt</span>=<span style="color:#98c379;">"&lt;?= htmlspecialchars($produto['nome']) ?&gt;"</span> <span style="color:#e06c75;">style</span>=<span style="color:#98c379;">"max-width:200px"</span><span style="color:#c678dd;">&gt;</span>
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">else: ?&gt;</span>
+    <span style="color:#c678dd;">&lt;span&gt;</span>Sem imagem<span style="color:#c678dd;">&lt;/span&gt;</span>
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">endif; ?&gt;</span>
+</pre>
+                </div>
+
+                <h3>4. Excluindo o arquivo físico ao excluir o registro</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">excluir</span>() {
+    <span style="color:#e06c75;">$id</span> = (<span style="color:#c678dd;">int</span>) <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'id'</span>];
+    <span style="color:#e06c75;">$produto</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">model</span>-><span style="color:#61afef;">find</span>(<span style="color:#e06c75;">$id</span>, <span style="color:#98c379;">'id_produto'</span>);
+
+    <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">empty</span>(<span style="color:#e06c75;">$produto</span>[<span style="color:#98c379;">'imagem'</span>])) {
+        <span style="color:#e06c75;">$caminho</span> = <span style="color:#e06c75;">$_SERVER</span>[<span style="color:#98c379;">'DOCUMENT_ROOT'</span>] . <span style="color:#61afef;">App</span>::<span style="color:#61afef;">getBasePath</span>() . <span style="color:#98c379;">'/public/'</span> . <span style="color:#e06c75;">$produto</span>[<span style="color:#98c379;">'imagem'</span>];
+        <span style="color:#c678dd;">if</span> (<span style="color:#61afef;">file_exists</span>(<span style="color:#e06c75;">$caminho</span>)) {
+            <span style="color:#61afef;">unlink</span>(<span style="color:#e06c75;">$caminho</span>); <span style="color:#5c6370;">// remove o arquivo do disco também</span>
+        }
+    }
+    <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">model</span>-><span style="color:#61afef;">delete</span>(<span style="color:#e06c75;">$id</span>, <span style="color:#98c379;">'id_produto'</span>);
+}
+</pre>
+                </div>
+
+                <h3>5. Múltiplos arquivos por registro (galeria)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;input</span> <span style="color:#e06c75;">type</span>=<span style="color:#98c379;">"file"</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"imagens[]"</span> <span style="color:#e06c75;">multiple</span> <span style="color:#e06c75;">accept</span>=<span style="color:#98c379;">"image/*"</span><span style="color:#c678dd;">&gt;</span>
+
+<span style="color:#5c6370;">// Controller - percorre cada arquivo enviado:</span>
+<span style="color:#c678dd;">foreach</span> (<span style="color:#e06c75;">$_FILES</span>[<span style="color:#98c379;">'imagens'</span>][<span style="color:#98c379;">'name'</span>] <span style="color:#c678dd;">as</span> <span style="color:#e06c75;">$i</span> => <span style="color:#e06c75;">$nome</span>) {
+    <span style="color:#c678dd;">if</span> (<span style="color:#61afef;">empty</span>(<span style="color:#e06c75;">$nome</span>)) <span style="color:#c678dd;">continue</span>;
+    <span style="color:#e06c75;">$arquivoUnico</span> = [
+        <span style="color:#98c379;">'name'</span> => <span style="color:#e06c75;">$_FILES</span>[<span style="color:#98c379;">'imagens'</span>][<span style="color:#98c379;">'name'</span>][<span style="color:#e06c75;">$i</span>],
+        <span style="color:#98c379;">'type'</span> => <span style="color:#e06c75;">$_FILES</span>[<span style="color:#98c379;">'imagens'</span>][<span style="color:#98c379;">'type'</span>][<span style="color:#e06c75;">$i</span>],
+        <span style="color:#98c379;">'tmp_name'</span> => <span style="color:#e06c75;">$_FILES</span>[<span style="color:#98c379;">'imagens'</span>][<span style="color:#98c379;">'tmp_name'</span>][<span style="color:#e06c75;">$i</span>],
+        <span style="color:#98c379;">'error'</span> => <span style="color:#e06c75;">$_FILES</span>[<span style="color:#98c379;">'imagens'</span>][<span style="color:#98c379;">'error'</span>][<span style="color:#e06c75;">$i</span>],
+        <span style="color:#98c379;">'size'</span> => <span style="color:#e06c75;">$_FILES</span>[<span style="color:#98c379;">'imagens'</span>][<span style="color:#98c379;">'size'</span>][<span style="color:#e06c75;">$i</span>],
+    ];
+    <span style="color:#e06c75;">$r</span> = <span style="color:#61afef;">UploadHelper</span>::<span style="color:#61afef;">upload</span>(<span style="color:#e06c75;">$arquivoUnico</span>, <span style="color:#98c379;">'uploads/galeria'</span>);
+    <span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$r</span>[<span style="color:#98c379;">'success'</span>]) {
+        <span style="color:#e06c75;">$pdo</span>-><span style="color:#61afef;">prepare</span>(<span style="color:#98c379;">"INSERT INTO produto_imagem (id_produto, arquivo) VALUES (?, ?)"</span>)
+            -><span style="color:#61afef;">execute</span>([<span style="color:#e06c75;">$idProduto</span>, <span style="color:#e06c75;">$r</span>[<span style="color:#98c379;">'arquivo'</span>]]);
+    }
+}
+</pre>
+                </div>
+
+                <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:.75rem 1rem;border-radius:8px;margin:1rem 0;color:#92400e;">
+                    <i class="fas fa-shield-alt" style="color:#d97706;"></i>
+                    A pasta <code style="background:#fde68a;padding:2px 6px;border-radius:4px;">public/uploads/</code> deve ter um <code style="background:#fde68a;padding:2px 6px;border-radius:4px;">.htaccess</code> bloqueando
+                    execução de PHP, para que mesmo se alguém burlar a validação de tipo, o arquivo
+                    enviado nunca rode como script:
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;"># public/uploads/.htaccess</span>
+<span style="color:#c678dd;">&lt;FilesMatch</span> <span style="color:#98c379;">"\.(php|phtml|php3|php4|php5|phar)$"</span><span style="color:#c678dd;">&gt;</span>
+    Deny from all
+<span style="color:#c678dd;">&lt;/FilesMatch&gt;</span>
+</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO 20: FLUXO COMPLETO DE LOGIN                           -->
+<!-- ============================================================ -->
+<section id="fluxo-login" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-right-to-bracket" style="color: #ef4444;"></i>
+                18. Fluxo Completo de Login
+            </h2>
+            <p>Do clique no botão até a sessão criada, passo a passo</p>
+        </div>
+
+        <div class="section-content">
+            <div class="content-block">
+                <div class="flow-steps">
+                    <div class="flow-step"><span class="step-number">1</span><span class="step-text">Usuário preenche e-mail/senha e envia o form (POST /login)</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">2</span><span class="step-text">CsrfMiddleware::validate() confirma que o token bate com o da sessão</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">3</span><span class="step-text">RateLimiter checa se esse e-mail/IP não excedeu tentativas</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">4</span><span class="step-text">Busca o usuário por e-mail e confere password_verify()</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">5</span><span class="step-text">Verifica se está ativo e com e-mail confirmado</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">6</span><span class="step-text">Cria $_SESSION['usuario'] e regenera o ID de sessão</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">7</span><span class="step-text">Loga a ação em log_sistema e redireciona</span></div>
+                </div>
+
+                <h3>Implementação com rate limiting</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">login</span>() {
+    <span style="color:#61afef;">CsrfMiddleware</span>::<span style="color:#61afef;">validate</span>();
+
+    <span style="color:#e06c75;">$login</span> = <span style="color:#61afef;">trim</span>(<span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'email'</span>] ?? <span style="color:#98c379;">''</span>);
+    <span style="color:#e06c75;">$senha</span> = <span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'senha'</span>] ?? <span style="color:#98c379;">''</span>;
+    <span style="color:#e06c75;">$ip</span> = <span style="color:#e06c75;">$_SERVER</span>[<span style="color:#98c379;">'REMOTE_ADDR'</span>] ?? <span style="color:#98c379;">'desconhecido'</span>;
+
+    <span style="color:#5c6370;">// 1. Bloqueia por excesso de tentativas (e-mail + IP)</span>
+    <span style="color:#c678dd;">if</span> (<span style="color:#61afef;">RateLimiter</span>::<span style="color:#61afef;">estaBloqueado</span>(<span style="color:#98c379;">"login:{$login}:{$ip}"</span>)) {
+        <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'flash'</span>] = [<span style="color:#98c379;">'tipo'</span>=><span style="color:#98c379;">'erro'</span>,<span style="color:#98c379;">'mensagem'</span>=><span style="color:#98c379;">'Muitas tentativas. Tente novamente em alguns minutos.'</span>];
+        <span style="color:#61afef;">header</span>(<span style="color:#98c379;">'Location: ' . App::getBasePath() . '/login'</span>);
+        <span style="color:#c678dd;">exit</span>;
+    }
+
+    <span style="color:#e06c75;">$usuario</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">usuario</span>-><span style="color:#61afef;">findByEmail</span>(<span style="color:#e06c75;">$login</span>);
+
+    <span style="color:#5c6370;">// 2. Credenciais inválidas -&gt; registra a tentativa falha</span>
+    <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#e06c75;">$usuario</span> || <span style="color:#c678dd;">!</span><span style="color:#61afef;">password_verify</span>(<span style="color:#e06c75;">$senha</span>, <span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'senha'</span>])) {
+        <span style="color:#61afef;">RateLimiter</span>::<span style="color:#61afef;">registrarFalha</span>(<span style="color:#98c379;">"login:{$login}:{$ip}"</span>);
+        <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'flash'</span>] = [<span style="color:#98c379;">'tipo'</span>=><span style="color:#98c379;">'erro'</span>,<span style="color:#98c379;">'mensagem'</span>=><span style="color:#98c379;">'Email ou senha incorretos.'</span>];
+        <span style="color:#61afef;">header</span>(<span style="color:#98c379;">'Location: ' . App::getBasePath() . '/login'</span>);
+        <span style="color:#c678dd;">exit</span>;
+    }
+
+    <span style="color:#5c6370;">// 3. Sucesso -&gt; limpa o contador de tentativas</span>
+    <span style="color:#61afef;">RateLimiter</span>::<span style="color:#61afef;">resetar</span>(<span style="color:#98c379;">"login:{$login}:{$ip}"</span>);
+
+    <span style="color:#5c6370;">// 4. Regenera o ID da sessão (evita session fixation)</span>
+    <span style="color:#61afef;">session_regenerate_id</span>(<span style="color:#c678dd;">true</span>);
+
+    <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'usuario'</span>] = [
+        <span style="color:#98c379;">'id'</span> => <span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'id_usuario'</span>],
+        <span style="color:#98c379;">'nome'</span> => <span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'nome'</span>],
+        <span style="color:#98c379;">'email'</span> => <span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'email'</span>],
+        <span style="color:#98c379;">'role'</span> => (<span style="color:#c678dd;">int</span>) <span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'id_perfil'</span>]
+    ];
+
+    <span style="color:#61afef;">SecurityHelper</span>::<span style="color:#61afef;">logAuditoria</span>(<span style="color:#98c379;">'login_usuario'</span>, <span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'id_usuario'</span>], <span style="color:#98c379;">'Login realizado'</span>, <span style="color:#98c379;">'info'</span>);
+    <span style="color:#61afef;">header</span>(<span style="color:#98c379;">'Location: ' . App::getBasePath() . '/'</span>);
+    <span style="color:#c678dd;">exit</span>;
+}
+</pre>
+                </div>
+
+                <h3>Logout seguro (destrói tudo, não só a variável)</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">logout</span>() {
+    <span style="color:#c678dd;">if</span> (<span style="color:#61afef;">session_status</span>() === <span style="color:#e06c75;">PHP_SESSION_NONE</span>) <span style="color:#61afef;">session_start</span>();
+
+    <span style="color:#e06c75;">$_SESSION</span> = [];                      <span style="color:#5c6370;">// limpa todas as variáveis</span>
+    <span style="color:#c678dd;">if</span> (<span style="color:#61afef;">ini_get</span>(<span style="color:#98c379;">"session.use_cookies"</span>)) { <span style="color:#5c6370;">// apaga o cookie do navegador</span>
+        <span style="color:#e06c75;">$params</span> = <span style="color:#61afef;">session_get_cookie_params</span>();
+        <span style="color:#61afef;">setcookie</span>(<span style="color:#61afef;">session_name</span>(), <span style="color:#98c379;">''</span>, <span style="color:#61afef;">time</span>() - <span style="color:#d19a66;">42000</span>, <span style="color:#e06c75;">$params</span>[<span style="color:#98c379;">"path"</span>], <span style="color:#e06c75;">$params</span>[<span style="color:#98c379;">"domain"</span>]);
+    }
+    <span style="color:#61afef;">session_destroy</span>();
+    <span style="color:#61afef;">header</span>(<span style="color:#98c379;">'Location: ' . App::getBasePath() . '/'</span>);
+    <span style="color:#c678dd;">exit</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO 21: FLUXO COMPLETO DE CADASTRO COM VERIFICAÇÃO        -->
+<!-- ============================================================ -->
+<section id="fluxo-cadastro" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-user-plus" style="color: #10b981;"></i>
+                19. Fluxo Completo de Cadastro com Verificação de E-mail
+            </h2>
+            <p>Do formulário público até a conta ativa</p>
+        </div>
+        <div class="section-content">
+            <div class="content-block">
+                <div class="flow-steps">
+                    <div class="flow-step"><span class="step-number">1</span><span class="step-text">Usuário preenche nome, e-mail e senha (POST /login/salvar)</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">2</span><span class="step-text">Valida CSRF, campos obrigatórios e SecurityHelper::validarForcaSenha()</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">3</span><span class="step-text">Verifica se o e-mail já existe (emailExists)</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">4</span><span class="step-text">Gera token aleatório (bin2hex(random_bytes(32))) e salva com email_verificado=false</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">5</span><span class="step-text">Envia e-mail com link: /auth/verificar?token=xxx</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">6</span><span class="step-text">Usuário clica no link -&gt; sistema busca pelo token e marca email_verificado=true</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">7</span><span class="step-text">Login volta a ser permitido (login bloqueia e-mail não verificado)</span></div>
+                </div>
+                <p>
+                    Esse fluxo já está implementado em <code>AuthController::salvar()</code> e
+                    <code>AuthController::verificar()</code>. Os pontos mais fáceis de errar ao adaptar
+                    para outro cadastro (ex: cadastro de fornecedor, cliente etc.) são:
+                </p>
+                <ul>
+                    <li>Esquecer de checar <code>emailExists()</code> antes de inserir → gera erro de UNIQUE feio</li>
+                    <li>Não invalidar o token depois de usado (permitiria reuso do link)</li>
+                    <li>Deixar o token válido para sempre — sempre defina expiração (ex: 24h) checando <code>data_criacao</code></li>
+                </ul>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// Checando expiração do token de verificação (24h):</span>
+<span style="color:#e06c75;">$usuario</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">usuario</span>-><span style="color:#61afef;">findByToken</span>(<span style="color:#e06c75;">$token</span>);
+<span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$usuario</span> && <span style="color:#61afef;">strtotime</span>(<span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'data_criacao'</span>]) < <span style="color:#61afef;">strtotime</span>(<span style="color:#98c379;">'-24 hours'</span>)) {
+    <span style="color:#5c6370;">// token expirado -&gt; gera novo e reenvia, não aceita o antigo</span>
+}
+</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- ============================================================ -->
+<!-- SEÇÃO 22: RECUPERAÇÃO DE SENHA                              -->
+<!-- ============================================================ -->
+<section id="fluxo-senha" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-key" style="color: #f59e0b;"></i>
+                20. Recuperação de Senha
+            </h2>
+            <p>Fluxo seguro que não revela se o e-mail existe ou não</p>
+        </div>
+        <div class="section-content">
+            <div class="content-block">
+                <div class="flow-steps">
+                    <div class="flow-step"><span class="step-number">1</span><span class="step-text">Usuário informa o e-mail em /auth/esqueci-senha</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">2</span><span class="step-text">Sistema SEMPRE responde "se o e-mail existir, você receberá instruções" (mesma mensagem, exista ou não)</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">3</span><span class="step-text">Se existir de fato: gera token, salva em reset_senha com expiração de 1h</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">4</span><span class="step-text">Envia e-mail com link /auth/redefinir?token=xxx</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">5</span><span class="step-text">Usuário define nova senha (revalidada com SecurityHelper)</span></div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step"><span class="step-number">6</span><span class="step-text">Token é marcado como usado (não pode ser reaproveitado)</span></div>
+                </div>
+                <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:.75rem 1rem;border-radius:8px;margin:1rem 0;color:#92400e;">
+                    <i class="fas fa-shield-alt" style="color:#d97706;"></i>
+                    <strong>Por que a mensagem é sempre igual?</strong> Se o sistema respondesse
+                    "e-mail não encontrado" só quando o e-mail não existe, um atacante poderia usar esse
+                    formulário para descobrir quais e-mails têm conta no sistema (enumeração de contas).
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">enviarToken</span>() {
+    <span style="color:#61afef;">CsrfMiddleware</span>::<span style="color:#61afef;">validate</span>();
+    <span style="color:#e06c75;">$email</span> = <span style="color:#61afef;">trim</span>(<span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'email'</span>] ?? <span style="color:#98c379;">''</span>);
+    <span style="color:#e06c75;">$usuario</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">usuario</span>-><span style="color:#61afef;">findByEmail</span>(<span style="color:#e06c75;">$email</span>);
+
+    <span style="color:#5c6370;">// Mensagem idêntica nos dois casos:</span>
+    <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'flash'</span>] = [<span style="color:#98c379;">'tipo'</span>=><span style="color:#98c379;">'sucesso'</span>,<span style="color:#98c379;">'mensagem'</span>=><span style="color:#98c379;">'Se o e-mail existir, você receberá as instruções.'</span>];
+
+    <span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">$usuario</span>) { <span style="color:#5c6370;">// só o comportamento interno muda, nunca a resposta visível</span>
+        <span style="color:#e06c75;">$token</span> = <span style="color:#61afef;">bin2hex</span>(<span style="color:#61afef;">random_bytes</span>(<span style="color:#d19a66;">32</span>));
+        <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">usuario</span>-><span style="color:#61afef;">salvarTokenReset</span>(<span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'id_usuario'</span>], <span style="color:#e06c75;">$token</span>);
+        (<span style="color:#c678dd;">new</span> <span style="color:#61afef;">Mail</span>())-><span style="color:#61afef;">sendResetPassword</span>(<span style="color:#e06c75;">$email</span>, <span style="color:#e06c75;">$usuario</span>[<span style="color:#98c379;">'nome'</span>], <span style="color:#e06c75;">$token</span>);
+    }
+
+    <span style="color:#61afef;">header</span>(<span style="color:#98c379;">'Location: ' . App::getBasePath() . '/login'</span>);
+    <span style="color:#c678dd;">exit</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO 23: PERMISSÕES AVANÇADAS                              -->
+<!-- ============================================================ -->
+<section id="permissoes-avancadas" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-user-shield" style="color: #8b5cf6;"></i>
+                21. Permissões Avançadas
+            </h2>
+            <p>Além do role: permissão por dono do registro e por ação</p>
+        </div>
+
+        <div class="section-content">
+            <div class="content-block">
+                <h3>Nível 1 — Por perfil (role), o que você já tem</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#e06c75;">$router</span>-><span style="color:#61afef;">get</span>(<span style="color:#98c379;">'/relatorios'</span>, <span style="color:#98c379;">'RelatorioController@index'</span>, [<span style="color:#d19a66;">1</span>, <span style="color:#d19a66;">2</span>]); <span style="color:#5c6370;">// só Master e Admin</span>
+</pre>
+                </div>
+
+                <h3>Nível 2 — Por dono do registro (ownership)</h3>
+                <p>
+                    Cenário comum: um <strong>Operador</strong> pode editar apenas os pedidos que
+                    ele mesmo criou, não os de outros operadores. Role sozinho não resolve isso —
+                    precisa comparar o dono do registro com o usuário logado:
+                </p>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">editar</span>() {
+    <span style="color:#e06c75;">$id</span> = (<span style="color:#c678dd;">int</span>) <span style="color:#e06c75;">$_GET</span>[<span style="color:#98c379;">'id'</span>];
+    <span style="color:#e06c75;">$pedido</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">model</span>-><span style="color:#61afef;">find</span>(<span style="color:#e06c75;">$id</span>, <span style="color:#98c379;">'id_pedido'</span>);
+
+    <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#e06c75;">$pedido</span>) { <span style="color:#61afef;">http_response_code</span>(<span style="color:#d19a66;">404</span>); <span style="color:#c678dd;">exit</span>; }
+
+    <span style="color:#e06c75;">$role</span> = (<span style="color:#c678dd;">int</span>) <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'usuario'</span>][<span style="color:#98c379;">'role'</span>];
+    <span style="color:#e06c75;">$souDono</span> = <span style="color:#e06c75;">$pedido</span>[<span style="color:#98c379;">'id_usuario_criador'</span>] == <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'usuario'</span>][<span style="color:#98c379;">'id'</span>];
+
+    <span style="color:#5c6370;">// Master/Admin sempre podem. Operador só se for dono.</span>
+    <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">in_array</span>(<span style="color:#e06c75;">$role</span>, [<span style="color:#d19a66;">1</span>, <span style="color:#d19a66;">2</span>]) && <span style="color:#c678dd;">!</span><span style="color:#e06c75;">$souDono</span>) {
+        <span style="color:#61afef;">http_response_code</span>(<span style="color:#d19a66;">403</span>);
+        <span style="color:#61afef;">echo</span> <span style="color:#98c379;">"&lt;h1&gt;403 - Você só pode editar seus próprios pedidos&lt;/h1&gt;"</span>;
+        <span style="color:#c678dd;">exit</span>;
+    }
+
+    <span style="color:#c678dd;">require</span> <span style="color:#98c379;">'../app/Views/pedidos/editar.php'</span>;
+}
+</pre>
+                </div>
+
+                <h3>Nível 3 — Por ação específica (nem toda ação de uma tela usa o mesmo nível)</h3>
+                <p>
+                    Ex: Admin pode <em>ver</em> todos os usuários, mas só <strong>Master</strong> pode
+                    <em>excluir</em>. Isso já existe em <code>UsuarioController</code>:
+                </p>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#e06c75;">$router</span>-><span style="color:#61afef;">get</span>(<span style="color:#98c379;">'/usuarios'</span>, <span style="color:#98c379;">'UsuarioController@index'</span>, [<span style="color:#d19a66;">1</span>, <span style="color:#d19a66;">2</span>]);   <span style="color:#5c6370;">// ver: Master + Admin</span>
+<span style="color:#e06c75;">$router</span>-><span style="color:#61afef;">get</span>(<span style="color:#98c379;">'/usuarios/excluir'</span>, <span style="color:#98c379;">'UsuarioController@excluir'</span>, [<span style="color:#d19a66;">1</span>]); <span style="color:#5c6370;">// excluir: só Master</span>
+</pre>
+                </div>
+
+                <h3>Nível 4 — Permissões dinâmicas guardadas no banco (para sistemas maiores)</h3>
+                <p>
+                    Quando 4 perfis fixos não bastam mais (ex: você precisa de permissões por
+                    módulo configuráveis pelo admin, sem alterar código), crie uma tabela de
+                    permissões e centralize a checagem:
+                </p>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">-- Schema:</span>
+<span style="color:#c678dd;">CREATE TABLE</span> <span style="color:#61afef;">permissao</span> (
+    <span style="color:#e06c75;">id_permissao</span> <span style="color:#c678dd;">INT PRIMARY KEY AUTO_INCREMENT</span>,
+    <span style="color:#e06c75;">id_perfil</span> <span style="color:#c678dd;">INT NOT NULL</span>,
+    <span style="color:#e06c75;">modulo</span> <span style="color:#c678dd;">VARCHAR(50) NOT NULL</span>,   <span style="color:#5c6370;">// ex: 'pedidos'</span>
+    <span style="color:#e06c75;">acao</span> <span style="color:#c678dd;">VARCHAR(50) NOT NULL</span>,     <span style="color:#5c6370;">// ex: 'criar', 'editar', 'excluir', 'ver'</span>
+    <span style="color:#e06c75;">permitido</span> <span style="color:#c678dd;">BOOLEAN DEFAULT TRUE</span>,
+    <span style="color:#c678dd;">UNIQUE KEY</span> (<span style="color:#e06c75;">id_perfil</span>, <span style="color:#e06c75;">modulo</span>, <span style="color:#e06c75;">acao</span>)
+);
+</pre>
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// app/Helpers/PermissaoHelper.php</span>
+<span style="color:#c678dd;">class</span> <span style="color:#61afef;">PermissaoHelper</span> {
+    <span style="color:#c678dd;">public static</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">pode</span>(<span style="color:#e06c75;">$modulo</span>, <span style="color:#e06c75;">$acao</span>) {
+        <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">isset</span>(<span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'usuario'</span>])) <span style="color:#c678dd;">return</span> <span style="color:#c678dd;">false</span>;
+        <span style="color:#e06c75;">$role</span> = (<span style="color:#c678dd;">int</span>) <span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'usuario'</span>][<span style="color:#98c379;">'role'</span>];
+
+        <span style="color:#c678dd;">static</span> <span style="color:#e06c75;">$cache</span> = [];
+        <span style="color:#e06c75;">$chave</span> = <span style="color:#98c379;">"{$role}:{$modulo}:{$acao}"</span>;
+        <span style="color:#c678dd;">if</span> (<span style="color:#61afef;">isset</span>(<span style="color:#e06c75;">$cache</span>[<span style="color:#e06c75;">$chave</span>])) <span style="color:#c678dd;">return</span> <span style="color:#e06c75;">$cache</span>[<span style="color:#e06c75;">$chave</span>];
+
+        <span style="color:#e06c75;">$pdo</span> = <span style="color:#61afef;">Database</span>::<span style="color:#61afef;">getConnection</span>();
+        <span style="color:#e06c75;">$stmt</span> = <span style="color:#e06c75;">$pdo</span>-><span style="color:#61afef;">prepare</span>(
+            <span style="color:#98c379;">"SELECT permitido FROM permissao WHERE id_perfil=? AND modulo=? AND acao=?"</span>
+        );
+        <span style="color:#e06c75;">$stmt</span>-><span style="color:#61afef;">execute</span>([<span style="color:#e06c75;">$role</span>, <span style="color:#e06c75;">$modulo</span>, <span style="color:#e06c75;">$acao</span>]);
+        <span style="color:#e06c75;">$resultado</span> = <span style="color:#e06c75;">$stmt</span>-><span style="color:#61afef;">fetchColumn</span>();
+
+        <span style="color:#5c6370;">// se não há registro, o padrão é NEGAR (fail-safe)</span>
+        <span style="color:#c678dd;">return</span> <span style="color:#e06c75;">$cache</span>[<span style="color:#e06c75;">$chave</span>] = (<span style="color:#e06c75;">$resultado</span> !== <span style="color:#c678dd;">false</span>) ? (<span style="color:#c678dd;">bool</span>) <span style="color:#e06c75;">$resultado</span> : <span style="color:#c678dd;">false</span>;
+    }
+}
+
+<span style="color:#5c6370;">// Uso no Controller:</span>
+<span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">PermissaoHelper</span>::<span style="color:#61afef;">pode</span>(<span style="color:#98c379;">'pedidos'</span>, <span style="color:#98c379;">'excluir'</span>)) {
+    <span style="color:#61afef;">http_response_code</span>(<span style="color:#d19a66;">403</span>); <span style="color:#c678dd;">exit</span>;
+}
+
+<span style="color:#5c6370;">// Uso na View (esconder botão que o usuário não pode usar):</span>
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">if</span> (<span style="color:#61afef;">PermissaoHelper</span>::<span style="color:#61afef;">pode</span>(<span style="color:#98c379;">'pedidos'</span>, <span style="color:#98c379;">'excluir'</span>))<span style="color:#c678dd;">: ?&gt;</span>
+    <span style="color:#c678dd;">&lt;a</span> <span style="color:#e06c75;">href</span>=<span style="color:#98c379;">"..."</span><span style="color:#c678dd;">&gt;</span>Excluir<span style="color:#c678dd;">&lt;/a&gt;</span>
+<span style="color:#c678dd;">&lt;?php</span> <span style="color:#c678dd;">endif;</span> <span style="color:#c678dd;">?&gt;</span>
+</pre>
+                </div>
+                <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:.75rem 1rem;border-radius:8px;margin:1rem 0;color:#92400e;">
+                    <i class="fas fa-shield-alt" style="color:#d97706;"></i>
+                    Repare no <strong>fail-safe</strong>: se não existe registro de permissão, o padrão
+                    é <em>negar</em>, nunca permitir. Esconder um botão na View é só cosmético — a
+                    checagem real e obrigatória é sempre no Controller.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- ============================================================ -->
+<!-- SEÇÃO 24: AJAX - AÇÕES SEM RECARREGAR A PÁGINA              -->
+<!-- ============================================================ -->
+<section id="ajax" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-bolt" style="color: #3b82f6;"></i>
+                22. AJAX - Ações sem Recarregar a Página
+            </h2>
+            <p>Marcar como lido, favoritar, excluir com confirmação, tudo sem reload</p>
+        </div>
+
+        <div class="section-content">
+            <div class="content-block">
+                <h3>Padrão: rota que responde JSON + fetch() no JS</h3>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// Rota:</span>
+<span style="color:#e06c75;">$router</span>-><span style="color:#61afef;">post</span>(<span style="color:#98c379;">'/produtos/favoritar'</span>, <span style="color:#98c379;">'ProdutoController@favoritar'</span>, [<span style="color:#d19a66;">1</span>,<span style="color:#d19a66;">2</span>,<span style="color:#d19a66;">3</span>,<span style="color:#d19a66;">4</span>]);
+
+<span style="color:#5c6370;">// Controller - responde JSON, não redireciona:</span>
+<span style="color:#c678dd;">public</span> <span style="color:#c678dd;">function</span> <span style="color:#61afef;">favoritar</span>() {
+    <span style="color:#61afef;">header</span>(<span style="color:#98c379;">'Content-Type: application/json'</span>);
+
+    <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">isset</span>(<span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'usuario'</span>])) {
+        <span style="color:#61afef;">http_response_code</span>(<span style="color:#d19a66;">401</span>);
+        <span style="color:#61afef;">echo</span> <span style="color:#61afef;">json_encode</span>([<span style="color:#98c379;">'erro'</span> => <span style="color:#98c379;">'Não autenticado'</span>]);
+        <span style="color:#c678dd;">exit</span>;
+    }
+
+    <span style="color:#5c6370;">// CSRF em AJAX vai via header, não campo de form:</span>
+    <span style="color:#e06c75;">$token</span> = <span style="color:#e06c75;">$_SERVER</span>[<span style="color:#98c379;">'HTTP_X_CSRF_TOKEN'</span>] ?? <span style="color:#98c379;">''</span>;
+    <span style="color:#c678dd;">if</span> (<span style="color:#c678dd;">!</span><span style="color:#61afef;">hash_equals</span>(<span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'csrf_token'</span>] ?? <span style="color:#98c379;">''</span>, <span style="color:#e06c75;">$token</span>)) {
+        <span style="color:#61afef;">http_response_code</span>(<span style="color:#d19a66;">403</span>);
+        <span style="color:#61afef;">echo</span> <span style="color:#61afef;">json_encode</span>([<span style="color:#98c379;">'erro'</span> => <span style="color:#98c379;">'Token inválido'</span>]);
+        <span style="color:#c678dd;">exit</span>;
+    }
+
+    <span style="color:#e06c75;">$idProduto</span> = (<span style="color:#c678dd;">int</span>) (<span style="color:#e06c75;">$_POST</span>[<span style="color:#98c379;">'id_produto'</span>] ?? <span style="color:#d19a66;">0</span>);
+    <span style="color:#e06c75;">$sucesso</span> = <span style="color:#e06c75;">$this</span>-><span style="color:#e06c75;">model</span>-><span style="color:#61afef;">toggleFavorito</span>(<span style="color:#e06c75;">$_SESSION</span>[<span style="color:#98c379;">'usuario'</span>][<span style="color:#98c379;">'id'</span>], <span style="color:#e06c75;">$idProduto</span>);
+
+    <span style="color:#61afef;">echo</span> <span style="color:#61afef;">json_encode</span>([<span style="color:#98c379;">'sucesso'</span> => <span style="color:#e06c75;">$sucesso</span>]);
+    <span style="color:#c678dd;">exit</span>;
+}
+</pre>
+                </div>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#5c6370;">// JS na View:</span>
+<span style="color:#61afef;">document</span>.<span style="color:#61afef;">querySelectorAll</span>(<span style="color:#98c379;">'.btn-favoritar'</span>).<span style="color:#61afef;">forEach</span>(<span style="color:#c678dd;">function</span>(<span style="color:#e06c75;">btn</span>) {
+    <span style="color:#e06c75;">btn</span>.<span style="color:#61afef;">addEventListener</span>(<span style="color:#98c379;">'click'</span>, <span style="color:#c678dd;">function</span>() {
+        <span style="color:#c678dd;">var</span> <span style="color:#e06c75;">idProduto</span> = <span style="color:#e06c75;">this</span>.<span style="color:#e06c75;">dataset</span>.<span style="color:#e06c75;">id</span>;
+        <span style="color:#c678dd;">var</span> <span style="color:#e06c75;">csrfToken</span> = <span style="color:#61afef;">document</span>.<span style="color:#61afef;">querySelector</span>(<span style="color:#98c379;">'meta[name="csrf-token"]'</span>).<span style="color:#e06c75;">content</span>;
+
+        <span style="color:#61afef;">fetch</span>(<span style="color:#98c379;">'&lt;?= $basePath ?&gt;/produtos/favoritar'</span>, {
+            <span style="color:#e06c75;">method</span>: <span style="color:#98c379;">'POST'</span>,
+            <span style="color:#e06c75;">headers</span>: {
+                <span style="color:#98c379;">'Content-Type'</span>: <span style="color:#98c379;">'application/x-www-form-urlencoded'</span>,
+                <span style="color:#98c379;">'X-CSRF-Token'</span>: <span style="color:#e06c75;">csrfToken</span>
+            },
+            <span style="color:#e06c75;">body</span>: <span style="color:#98c379;">'id_produto='</span> + <span style="color:#e06c75;">idProduto</span>
+        })
+        .<span style="color:#61afef;">then</span>(<span style="color:#c678dd;">function</span>(<span style="color:#e06c75;">r</span>) { <span style="color:#c678dd;">return</span> <span style="color:#e06c75;">r</span>.<span style="color:#61afef;">json</span>(); })
+        .<span style="color:#61afef;">then</span>(<span style="color:#c678dd;">function</span>(<span style="color:#e06c75;">data</span>) {
+            <span style="color:#c678dd;">if</span> (<span style="color:#e06c75;">data</span>.<span style="color:#e06c75;">sucesso</span>) {
+                <span style="color:#e06c75;">btn</span>.<span style="color:#e06c75;">classList</span>.<span style="color:#61afef;">toggle</span>(<span style="color:#98c379;">'favoritado'</span>);
+            } <span style="color:#c678dd;">else</span> {
+                <span style="color:#61afef;">Swal</span>.<span style="color:#61afef;">fire</span>(<span style="color:#98c379;">'Erro'</span>, <span style="color:#e06c75;">data</span>.<span style="color:#e06c75;">erro</span> || <span style="color:#98c379;">'Não foi possível favoritar'</span>, <span style="color:#98c379;">'error'</span>);
+            }
+        });
+    });
+});
+</pre>
+                </div>
+                <p>
+                    Adicione o token CSRF como meta tag no <code>header.php</code> para reaproveitar em
+                    qualquer chamada AJAX da página:
+                </p>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#c678dd;">&lt;meta</span> <span style="color:#e06c75;">name</span>=<span style="color:#98c379;">"csrf-token"</span> <span style="color:#e06c75;">content</span>=<span style="color:#98c379;">"&lt;?= CsrfMiddleware::generateToken() ?&gt;"</span><span style="color:#c678dd;">&gt;</span>
+</pre>
+                </div>
+
+                <h3>Exemplo real já usado no projeto: contador de notificações</h3>
+                <p>
+                    <code>NotificacaoController::contador()</code> já segue exatamente esse padrão
+                    (responde JSON puro). Dá pra chamar de tempos em tempos com <code>setInterval</code>
+                    para atualizar o sininho sem reload:
+                </p>
+                <div style="background:#1e1e2e;color:#d4d4d4;padding:1rem;border-radius:8px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;margin:1rem 0;">
+<pre style="margin:0;color:#d4d4d4;">
+<span style="color:#61afef;">setInterval</span>(<span style="color:#c678dd;">function</span>() {
+    <span style="color:#61afef;">fetch</span>(<span style="color:#98c379;">'&lt;?= $basePath ?&gt;/notificacoes/contador'</span>)
+        .<span style="color:#61afef;">then</span>(<span style="color:#c678dd;">function</span>(<span style="color:#e06c75;">r</span>) { <span style="color:#c678dd;">return</span> <span style="color:#e06c75;">r</span>.<span style="color:#61afef;">json</span>(); })
+        .<span style="color:#61afef;">then</span>(<span style="color:#c678dd;">function</span>(<span style="color:#e06c75;">data</span>) {
+            <span style="color:#61afef;">document</span>.<span style="color:#61afef;">querySelector</span>(<span style="color:#98c379;">'.badge-notificacao'</span>).<span style="color:#e06c75;">textContent</span> = <span style="color:#e06c75;">data</span>.<span style="color:#e06c75;">total</span>;
+        });
+}, <span style="color:#d19a66;">30000</span>); <span style="color:#5c6370;">// a cada 30 segundos</span>
+</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- ============================================================ -->
+<!-- SEÇÃO 25: SEGURANÇA APLICADA NO PROJETO                     -->
+<!-- ============================================================ -->
+<section id="seguranca-aplicada" class="tutorial-section animate-in">
+    <div class="container">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-shield-halved" style="color: #ef4444;"></i>
+                23. Segurança Aplicada no Projeto
+            </h2>
+            <p>Checklist do que já está implementado e por quê</p>
+        </div>
+
+        <div class="section-content">
+            <div class="content-block">
+                <div class="table-wrapper" style="overflow-x:auto;">
+                    <table class="feature-table" style="width:100%;border-collapse:collapse;font-size:14px;">
+                        <thead>
+                            <tr style="background:#f1f5f9;">
+                                <th style="padding:10px 16px;text-align:left;border:1px solid #e2e8f0;">Proteção</th>
+                                <th style="padding:10px 16px;text-align:left;border:1px solid #e2e8f0;">Onde</th>
+                                <th style="padding:10px 16px;text-align:left;border:1px solid #e2e8f0;">Contra o quê</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>Token CSRF</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>CsrfMiddleware</code></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Requisições forjadas de outros sites</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong><code>hash_equals()</code></strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Comparação de tokens (CSRF, reset de senha)</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Timing attacks</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong><code>password_hash()</code> / <code>password_verify()</code></strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Toda senha</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Vazamento de senha em texto plano</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>Prepared Statements (PDO)</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Todos os Models</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">SQL Injection</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong><code>htmlspecialchars()</code></strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Toda saída de dados nas Views</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">XSS (Cross-Site Scripting)</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>Validação MIME real (finfo)</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>UploadHelper</code> / <code>SecurityHelper</code></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Upload de arquivo malicioso disfarçado</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong><code>.htaccess</code> em uploads</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>public/uploads/.htaccess</code></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Execução de PHP enviado como upload</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>Rate limiting no login</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>RateLimiter</code></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Força bruta de senha</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>Resposta idêntica em "esqueci senha"</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>AuthController::enviarToken()</code></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Enumeração de contas/e-mails</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>Logs de auditoria</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>log_sistema</code> / <code>SecurityHelper::logAuditoria()</code></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Rastreabilidade de ações sensíveis</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>Whitelist de colunas em ORDER BY</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Listagens com ordenação dinâmica</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">SQL Injection via parâmetro de URL</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>Ownership check</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Editar/excluir registros próprios</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Um usuário mexer em dados de outro</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong><code>display_errors</code> desligado em produção</strong></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>public/index.php</code></td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;">Vazamento de caminhos/queries em erros</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Checklist rápido para toda página nova que você criar</h3>
+                <ol style="line-height:2;">
+                    <li>Rota tem os <code>roles</code> corretos?</li>
+                    <li>Formulário POST tem <code>ViewHelper::csrfField()</code>?</li>
+                    <li>Controller valida CSRF com <code>CsrfMiddleware::validate()</code>?</li>
+                    <li>Todo dado do <code>$_POST</code>/<code>$_GET</code> é validado antes de usar?</li>
+                    <li>Toda saída nas Views passa por <code>htmlspecialchars()</code>?</li>
+                    <li>Toda query usa parâmetros preparados (nunca concatenação direta com input do usuário)?</li>
+                    <li>Se envolve edição/exclusão de um registro específico, checa se o usuário tem permissão sobre <strong>aquele</strong> registro (não só o role)?</li>
+                    <li>Ações sensíveis geram log de auditoria?</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
 <!-- ============================================================ -->
 <!-- RODAPÉ DA PÁGINA                                           -->
 <!-- ============================================================ -->
