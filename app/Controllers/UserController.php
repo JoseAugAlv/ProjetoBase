@@ -111,13 +111,18 @@ class UserController
             ];
 
             if (!empty($senha)) {
-                if (strlen($senha) < 6) {
-                    $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'A senha deve ter no mínimo 6 caracteres.'];
-                    header('Location: ' . App::getBasePath() . '/user/editar');
-                    exit;
-                }
-                $dados['senha'] = password_hash($senha, PASSWORD_DEFAULT);
+            require_once __DIR__ . '/../Helpers/PasswordHelper.php';
+            $validacao = PasswordHelper::validate($senha);
+            if (!$validacao['valid']) {
+                $_SESSION['flash'] = [
+                    'tipo' => 'erro', 
+                    'mensagem' => 'Senha fraca. Requisitos: ' . implode(', ', $validacao['errors'])
+                ];
+                header('Location: ' . App::getBasePath() . '/user/editar');
+                exit;
             }
+            $dados['senha'] = PasswordHelper::hash($senha);
+        }
 
             $this->usuario->update($id, $dados);
 

@@ -40,7 +40,7 @@ class CsrfMiddleware
         $tokenSessao = $_SESSION['csrf_token'] ?? null;
         $tokenRequisicao = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
 
-        if (!$tokenSessao || !$tokenRequisicao || $tokenSessao !== $tokenRequisicao) {
+        if (!$tokenSessao || !$tokenRequisicao || !hash_equals((string)$tokenSessao, (string)$tokenRequisicao)) {
             http_response_code(403);
             die(json_encode(['erro' => 'Token CSRF inválido']));
         }

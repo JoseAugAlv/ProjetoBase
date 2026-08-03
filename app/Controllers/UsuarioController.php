@@ -123,23 +123,29 @@ class UsuarioController
             exit;
         }
 
-        if (empty($senha)) {
-            $senha = bin2hex(random_bytes(4));
-        }
+        require_once __DIR__ . '/../Helpers/PasswordHelper.php';
 
-        if (strlen($senha) < 6) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'A senha deve ter no mínimo 6 caracteres.'];
-            header('Location: ' . App::getBasePath() . '/usuarios/criar');
-            exit;
+        if (empty($senha)) {
+            $senha = PasswordHelper::generateTemp();
+        } else {
+            $validacao = PasswordHelper::validate($senha);
+            if (!$validacao['valid']) {
+                $_SESSION['flash'] = [
+                    'tipo' => 'erro', 
+                    'mensagem' => 'Senha fraca. Requisitos: ' . implode(', ', $validacao['errors'])
+                ];
+                header('Location: ' . App::getBasePath() . '/usuarios/criar');
+                exit;
+            }
         }
 
         try {
-            $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+            require_once __DIR__ . '/../Helpers/PasswordHelper.php';
+            
+            $senhaTemp = $senha; // Se veio do formulário ou gerada
+            $senhaHash = PasswordHelper::hash($senhaTemp);
             $token = bin2hex(random_bytes(32));
 
-            // ============================================================
-            // REMOVIDO: primeiro_acesso = FALSE diretamente
-            // ============================================================
             $idUsuario = $this->usuario->create([
                 'nome' => $nome,
                 'email' => $email,
@@ -152,6 +158,20 @@ class UsuarioController
                 'primeiro_acesso' => false
             ]);
 
+            // Envia e-mail com a senha
+            require_once __DIR__ . '/../Core/Mail.php';
+            $mail = new Mail();
+            $assunto = "Sua conta foi criada - " . App::getName();
+            $mensagem = "
+            <h2>Olá, {$nome}!</h2>
+            <p>Sua conta foi criada no sistema " . App::getName() . ".</p>
+            <p><strong>E-mail:</strong> {$email}</p>
+            <p><strong>Senha temporária:</strong> {$senhaTemp}</p>
+            <p>Recomendamos alterar sua senha no primeiro acesso.</p>
+            <p><a href='" . App::getUrl() . "/login'>Acessar o sistema</a></p>
+            ";
+            $mail->send($email, $assunto, $mensagem, $nome);
+
             require_once __DIR__ . '/../Helpers/SecurityHelper.php';
             SecurityHelper::logAuditoria(
                 'criar_usuario',
@@ -162,18 +182,15 @@ class UsuarioController
 
             $_SESSION['flash'] = [
                 'tipo' => 'sucesso',
-                'mensagem' => "Usuário criado com sucesso!<br><strong>Senha temporária:</strong> {$senha}"
+                'mensagem' => "Usuário criado com sucesso! As credenciais foram enviadas para o e-mail."
             ];
 
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-
         } catch (Exception $e) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao criar usuário: ' . $e->getMessage()];
-            header('Location: ' . App::getBasePath() . '/usuarios/criar');
-            exit;
+                $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao criar usuário: ' . $e->getMessage()];
+                header('Location: ' . App::getBasePath() . '/usuarios/criar');
+                exit;
+            }
         }
-    }
 
     /**
      * Formulário de edição (Admin e Master)
@@ -280,13 +297,18 @@ class UsuarioController
             ];
 
             if (!empty($senha)) {
-                if (strlen($senha) < 6) {
-                    $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'A senha deve ter no mínimo 6 caracteres.'];
-                    header('Location: ' . App::getBasePath() . '/usuarios/editar?id=' . $id);
-                    exit;
-                }
-                $dados['senha'] = password_hash($senha, PASSWORD_DEFAULT);
+            require_once __DIR__ . '/../Helpers/PasswordHelper.php';
+            $validacao = PasswordHelper::validate($senha);
+            if (!$validacao['valid']) {
+                $_SESSION['flash'] = [
+                    'tipo' => 'erro', 
+                    'mensagem' => 'Senha fraca. Requisitos: ' . implode(', ', $validacao['errors'])
+                ];
+                header('Location: ' . App::getBasePath() . '/usuarios/editar?id=' . $id);
+                exit;
             }
+            $dados['senha'] = PasswordHelper::hash($senha);
+        }
 
             $this->usuario->update($id, $dados);
 

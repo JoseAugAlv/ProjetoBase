@@ -9,14 +9,14 @@
 // 1. CONFIGURAÇÃO DA PÁGINA
 // ============================================================
 
-$tituloPagina = 'Tutorial Completo - ' . App::getName();
+$basePath = App::getBasePath();
+$appName = App::getName();
+
+$tituloPagina = 'Tutorial Completo - ' . $appName;
 $cssPagina = 'tutorial.css';
 
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
-
-$basePath = App::getBasePath();
-$appName = App::getName();
 ?>
 
 <!-- ============================================================ -->
@@ -45,6 +45,7 @@ $appName = App::getName();
             <p class="banner-description">
                 Guia do Sistema ProjetoBase - Implementação Passo a Passo
             </p>
+
 
             <!-- ============================================================ -->
             <!-- BOTÃO DE CRÉDITOS                                           -->
@@ -93,6 +94,17 @@ $appName = App::getName();
                     Sistema base em PHP com arquitetura MVC e Programação Orientada a Objetos.
                     Estrutura pronta para desenvolvimento de sistemas web com autenticação,
                     controle de permissões, CRUD dinâmico, notificações, logs e muito mais.
+                </p>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- AVISO DE SEGURANÇA                                          -->
+            <!-- ============================================================ -->
+            <div class="security-notice" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; margin: 1rem 0; border-radius: 8px; max-width: 800px; margin: 1rem auto;">
+                <p style="margin: 0; color: #92400e;">
+                    <i class="fas fa-shield-alt" style="color: #d97706;"></i>
+                    <strong>Dica de segurança:</strong> Em produção, altere as senhas dos usuários de teste 
+                    e configure corretamente o arquivo <code>.env</code>.
                 </p>
             </div>
 
@@ -244,7 +256,7 @@ $appName = App::getName();
                         <tbody>
                             <tr>
                                 <td><strong>Autenticação</strong></td>
-                                <td>Login, cadastro, recuperação de senha</td>
+                                <td>Login, cadastro com verificação de e-mail, recuperação de senha</td>
                             </tr>
                             <tr>
                                 <td><strong>CRUD de Usuários</strong></td>
@@ -296,6 +308,14 @@ $appName = App::getName();
                     <li>Configure o arquivo <code>.env</code> com seus dados (banco, e-mail)</li>
                     <li>Execute o script <code>ProjetoBase_bd.sql</code> no MySQL</li>
                     <li>Acesse o sistema pelo navegador</li>
+                    <li>Faça login com um dos usuários de teste:
+                        <ul style="margin-top: 0.5rem;">
+                            <li><code>master@projetobase.com</code> / <code>123</code> (Master - acesso total)</li>
+                            <li><code>admin@projetobase.com</code> / <code>123</code> (Admin - gerencia usuários)</li>
+                            <li><code>operador@projetobase.com</code> / <code>123</code> (Operador - operações básicas)</li>
+                            <li><code>usuario@projetobase.com</code> / <code>123</code> (Usuario - acesso restrito)</li>
+                        </ul>
+                    </li>
                     <li>Comece a personalizar!</li>
                 </ol>
             </div>
@@ -406,7 +426,9 @@ ProjetoBase/
 │   │
 │   ├── Helpers/                 # Funções auxiliares
 │   │   ├── MenuHelper.php       # Renderiza o menu dinâmico
-│   │   └── SecurityHelper.php   # Validação de senha, logs, sanitização
+│   │   ├── SecurityHelper.php   # Validação de senha, logs, sanitização
+│   │   ├── PasswordHelper.php   # Validação e geração de senhas
+│   │   └── RateLimiter.php      # Controle de tentativas de login
 │   │
 │   ├── Middleware/              # Filtros de requisição
 │   │   ├── CsrfMiddleware.php   # Proteção contra ataques CSRF
@@ -861,7 +883,7 @@ ProjetoBase/
                         <p>Dados e Regras de Negócio</p>
                         <p class="mvc-detail">Interage com o Banco de Dados</p>
                     </div>
-                    <div class="mvc-arrow">⬇</div>
+                    <div class="mvc-arrow">↓</div>
                     <div class="mvc-layer mvc-view">
                         <div class="mvc-icon">
                             <i class="fas fa-desktop"></i>
@@ -870,7 +892,7 @@ ProjetoBase/
                         <p>Interface do Usuário</p>
                         <p class="mvc-detail">HTML / CSS / JS</p>
                     </div>
-                    <div class="mvc-arrow">⬇</div>
+                    <div class="mvc-arrow">↓</div>
                     <div class="mvc-layer mvc-controller">
                         <div class="mvc-icon">
                             <i class="fas fa-code"></i>
@@ -1228,6 +1250,17 @@ ProjetoBase/
                     <li>Cria as tabelas: <code>usuario</code>, <code>perfil</code>, <code>log_sistema</code>, etc</li>
                     <li>Insere os perfis padrão: Master, Admin, Operador, Usuario</li>
                     <li>Cria usuários de teste com senha '123'</li>
+                </ul>
+
+                <h4>Usuários de Teste</h4>
+                <p>
+                    O script já cria usuários de teste para você começar a usar o sistema imediatamente:
+                </p>
+                <ul>
+                    <li><strong>Master:</strong> master@projetobase.com / 123</li>
+                    <li><strong>Admin:</strong> admin@projetobase.com / 123</li>
+                    <li><strong>Operador:</strong> operador@projetobase.com / 123</li>
+                    <li><strong>Usuario:</strong> usuario@projetobase.com / 123</li>
                 </ul>
 
                 <h3>Passo 3: Ativar/Desativar Módulos</h3>
@@ -1770,6 +1803,16 @@ ProjetoBase/
                                 <td><strong>SecurityHelper</strong></td>
                                 <td>Valida senha, sanitiza arquivos, logs</td>
                                 <td><code>app/Helpers/SecurityHelper.php</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>PasswordHelper</strong></td>
+                                <td>Validação e geração de senhas seguras</td>
+                                <td><code>app/Helpers/PasswordHelper.php</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>RateLimiter</strong></td>
+                                <td>Controle de tentativas de login</td>
+                                <td><code>app/Helpers/RateLimiter.php</code></td>
                             </tr>
                             <tr>
                                 <td><strong>UploadHelper</strong></td>

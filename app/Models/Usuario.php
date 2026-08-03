@@ -218,11 +218,19 @@ class Usuario
      */
     public function validarTokenReset(string $token): ?array
     {
-        $sql = "SELECT id_usuario FROM reset_senha 
-                WHERE token = ? AND usado = FALSE AND expiracao > NOW()";
+        $sql = "SELECT * FROM reset_senha 
+                WHERE usado = FALSE AND expiracao > NOW()";
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$token]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $stmt->execute();
+        $tokens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($tokens as $row) {
+            if (hash_equals($row['token'], $token)) {
+                return ['id_usuario' => $row['id_usuario']];
+            }
+        }
+        
+        return null;
     }
 
     /**

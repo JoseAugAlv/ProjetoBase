@@ -5,8 +5,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once $_SERVER['DOCUMENT_ROOT'] . App::getBasePath() . '/app/Helpers/NavHelper.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . App::getBasePath() . '/app/Helpers/MenuHelper.php';
+require_once __DIR__ . '/../../Helpers/NavHelper.php';
+require_once __DIR__ . '/../../Helpers/MenuHelper.php';
 
 $usuario = $_SESSION['usuario'] ?? null;
 $appName = App::getName();

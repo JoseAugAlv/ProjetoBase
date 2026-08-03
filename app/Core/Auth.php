@@ -16,8 +16,15 @@ class Auth
         return $_SESSION['usuario'] ?? null;
     }
 
-    public static function role()
+    public static function role(): ?int
     {
-        return $_SESSION['usuario']['perfil'] ?? null;
+        $user = self::user();
+        return $user['role'] ?? null;
+    }
+
+    public static function hasRole(array $allowedRoles): bool
+    {
+        $role = self::role();
+        return $role !== null && in_array($role, $allowedRoles);
     }
 }

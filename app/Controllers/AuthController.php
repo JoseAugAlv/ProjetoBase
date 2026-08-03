@@ -54,9 +54,18 @@ class AuthController
             exit;
         }
 
+        // Rate limiting - evitar brute force
+        require_once __DIR__ . '/../Helpers/RateLimiter.php';
+        if (!RateLimiter::check($login, 5, 300)) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Muitas tentativas. Aguarde 5 minutos.'];
+            header('Location: ' . App::getBasePath() . '/login');
+            exit;
+        }
+
         $usuario = $this->usuario->findByEmail($login);
 
         if (!$usuario || !password_verify($senha, $usuario['senha'])) {
+            RateLimiter::increment($login);
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Email ou senha incorretos.'];
             header('Location: ' . App::getBasePath() . '/login');
             exit;
@@ -92,6 +101,8 @@ class AuthController
         require_once __DIR__ . '/../Helpers/SecurityHelper.php';
         SecurityHelper::logAuditoria('login_usuario', $usuario['id_usuario'], 'Login realizado', 'info');
 
+        RateLimiter::reset($login);
+        
         header('Location: ' . App::getBasePath() . '/');
         exit;
     }
@@ -321,23 +332,18 @@ class AuthController
 
         $email = $_GET['email'] ?? '';
 
-        if (empty($email)) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
+        // MENSAGEM GENÉRICA
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Se o e-mail existir, você receberá as instruções.'];
+
+        if (!empty($email)) {
+            $usuario = $this->usuario->findByEmail($email);
+            
+            if ($usuario && !$usuario['email_verificado']) {
+                $novoToken = $this->usuario->gerarTokenVerificacao($usuario['id_usuario']);
+                $this->enviarEmailVerificacao($usuario['nome'], $email, $novoToken);
+            }
         }
 
-        $usuario = $this->usuario->findByEmail($email);
-
-        if (!$usuario || $usuario['email_verificado']) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Usuário não encontrado ou já verificado.'];
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $novoToken = $this->usuario->gerarTokenVerificacao($usuario['id_usuario']);
-        $this->enviarEmailVerificacao($usuario['nome'], $email, $novoToken);
-
-        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'E-mail de verificação reenviado!'];
         header('Location: ' . App::getBasePath() . '/login');
         exit;
     }
@@ -375,28 +381,21 @@ class AuthController
             exit;
         }
 
+        // MENSAGEM GENÉRICA - evita enumeração de e-mail
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Se o e-mail existir, você receberá as instruções.'];
+
         $usuario = $this->usuario->findByEmail($email);
 
-        if (!$usuario) {
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Se o e-mail existir, você receberá as instruções.'];
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
+        if ($usuario) {
+            $token = bin2hex(random_bytes(32));
+            $this->usuario->salvarTokenReset($usuario['id_usuario'], $token);
 
-        $token = bin2hex(random_bytes(32));
-        $this->usuario->salvarTokenReset($usuario['id_usuario'], $token);
-
-        try {
-            $mail = new Mail();
-            $enviado = $mail->sendResetPassword($email, $usuario['nome'], $token);
-
-            if ($enviado) {
-                $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'E-mail enviado para ' . $email];
-            } else {
-                $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao enviar e-mail.'];
+            try {
+                $mail = new Mail();
+                $mail->sendResetPassword($email, $usuario['nome'], $token);
+            } catch (Exception $e) {
+                error_log("Erro ao enviar e-mail de reset: " . $e->getMessage());
             }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao enviar e-mail: ' . $e->getMessage()];
         }
 
         header('Location: ' . App::getBasePath() . '/login');
