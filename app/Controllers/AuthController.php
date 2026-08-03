@@ -77,15 +77,10 @@ class AuthController
             exit;
         }
 
-        if (isset($usuario['primeiro_acesso']) && $usuario['primeiro_acesso'] == 1) {
-            $_SESSION['primeiro_acesso'] = [
-                'id_usuario' => $usuario['id_usuario'],
-                'nome' => $usuario['nome'],
-                'email_atual' => $usuario['email']
-            ];
-            header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-            exit;
-        }
+        // ============================================================
+        // REMOVIDO: Lógica de primeiro acesso
+        // O usuário sempre faz login normalmente
+        // ============================================================
 
         $_SESSION['usuario'] = [
             'id' => $usuario['id_usuario'],
@@ -190,13 +185,18 @@ class AuthController
             $token = bin2hex(random_bytes(32));
             $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
 
+            // ============================================================
+            // REMOVIDO: primeiro_acesso = TRUE
+            // Agora o usuário já fica com primeiro_acesso = FALSE
+            // ============================================================
             $idUsuario = $this->usuario->create([
                 'nome' => $nome,
                 'email' => $email,
                 'senha' => $senhaHash,
                 'telefone' => $telefone,
                 'data_nascimento' => $dataNascimento,
-                'token' => $token
+                'token' => $token,
+                'primeiro_acesso' => false // <-- Agora é FALSE
             ]);
 
             $this->usuario->atualizarPerfil($idUsuario, 4);
@@ -499,123 +499,9 @@ class AuthController
         }
     }
 
-    /**
-     * Primeiro Acesso - Página
-     */
-    public function primeiroAcesso()
-    {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        if (!isset($_SESSION['primeiro_acesso'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $basePath = App::getBasePath();
-        $appName = App::getName();
-        require '../app/Views/auth/primeiro_acesso.php';
-    }
-
-    /**
-     * Primeiro Acesso - Completar
-     */
-    public function completarPrimeiroAcesso()
-    {
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
-
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        if (!isset($_SESSION['primeiro_acesso'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $dadosSessao = $_SESSION['primeiro_acesso'];
-        $idUsuario = (int) ($_POST['id_usuario'] ?? 0);
-        $email = trim($_POST['email'] ?? '');
-        $senha = $_POST['senha'] ?? '';
-        $senhaConfirm = $_POST['senha_confirm'] ?? '';
-        $dataNascimento = $_POST['data_nascimento'] ?? '';
-
-        if ($idUsuario != $dadosSessao['id_usuario']) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Dados inválidos.'];
-            header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-            exit;
-        }
-
-        if (empty($email) || empty($senha) || empty($senhaConfirm) || empty($dataNascimento)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Preencha todos os campos obrigatórios.'];
-            header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-            exit;
-        }
-
-        if ($senha !== $senhaConfirm) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'As senhas não coincidem.'];
-            header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-            exit;
-        }
-
-        require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-        $validacao = SecurityHelper::validarForcaSenha($senha);
-        if (!$validacao['valida']) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Senha fraca. Requisitos: ' . implode(', ', $validacao['erros'])];
-            header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-            exit;
-        }
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'E-mail inválido.'];
-            header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-            exit;
-        }
-
-        if (!empty($dataNascimento)) {
-            $idade = date_diff(date_create($dataNascimento), date_create('today'))->y;
-            if ($idade < 12) {
-                $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Você deve ter pelo menos 12 anos.'];
-                header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-                exit;
-            }
-        }
-
-        if ($this->usuario->emailExists($email, $idUsuario)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Este e-mail já está cadastrado.'];
-            header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-            exit;
-        }
-
-        try {
-            $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-            $token = bin2hex(random_bytes(32));
-
-            $this->usuario->update($idUsuario, [
-                'email' => $email,
-                'senha' => $senhaHash,
-                'data_nascimento' => $dataNascimento,
-                'token_verificacao' => $token,
-                'email_verificado' => false,
-                'primeiro_acesso' => false
-            ]);
-
-            $this->usuario->concluirPrimeiroAcesso($idUsuario);
-            $this->enviarEmailVerificacao($dadosSessao['nome'], $email, $token);
-
-            unset($_SESSION['primeiro_acesso']);
-
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Cadastro completado! Um e-mail de verificação foi enviado para ' . $email . '.'];
-
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao completar cadastro: ' . $e->getMessage()];
-            header('Location: ' . App::getBasePath() . '/auth/primeiro-acesso');
-            exit;
-        }
-    }
+    // ============================================================
+    // REMOVIDO: TODOS os métodos relacionados a primeiro acesso
+    // - primeiroAcesso()
+    // - completarPrimeiroAcesso()
+    // ============================================================
 }

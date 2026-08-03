@@ -52,12 +52,9 @@ return [
                     'url' => '/usuarios',
                     'roles' => [1, 2],
                 ],
-                [
-                    'label' => 'Primeiro Acesso Pendente',
-                    'icon' => 'fas fa-user-clock',
-                    'url' => '/usuarios/pendentes',
-                    'roles' => [1],
-                ],
+                // ============================================================
+                // REMOVIDO: Primeiro Acesso Pendente
+                // ============================================================
             ],
         ],
 

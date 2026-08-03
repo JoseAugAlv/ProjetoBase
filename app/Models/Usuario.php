@@ -68,8 +68,22 @@ class Usuario
      */
     public function create(array $dados): int
     {
-        $sql = "INSERT INTO usuario (nome, email, senha, telefone, data_nascimento, id_perfil, token_verificacao, email_verificado, primeiro_acesso) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, TRUE)";
+        // ============================================================
+        // REMOVIDO: primeiro_acesso = TRUE
+        // Agora o campo primeiro_acesso sempre será FALSE
+        // ============================================================
+        $sql = "INSERT INTO usuario (
+                    nome, 
+                    email, 
+                    senha, 
+                    telefone, 
+                    data_nascimento, 
+                    id_perfil, 
+                    token_verificacao, 
+                    email_verificado,
+                    primeiro_acesso
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, ?)";
+        
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
             $dados['nome'],
@@ -77,8 +91,9 @@ class Usuario
             $dados['senha'],
             $dados['telefone'] ?? null,
             $dados['data_nascimento'] ?? null,
-            $dados['id_perfil'] ?? 4, // Padrão: Usuario
-            $dados['token']
+            $dados['id_perfil'] ?? 4,
+            $dados['token'],
+            $dados['primeiro_acesso'] ?? false // <-- Agora FALSE por padrão
         ]);
         return (int) $this->conn->lastInsertId();
     }
@@ -124,10 +139,9 @@ class Usuario
             $updates[] = "email_verificado = ?";
             $params[] = $dados['email_verificado'];
         }
-        if (isset($dados['primeiro_acesso'])) {
-            $updates[] = "primeiro_acesso = ?";
-            $params[] = $dados['primeiro_acesso'];
-        }
+        // ============================================================
+        // REMOVIDO: primeiro_acesso não é mais atualizado
+        // ============================================================
         if (isset($dados['ativo'])) {
             $updates[] = "ativo = ?";
             $params[] = $dados['ativo'];
@@ -163,19 +177,6 @@ class Usuario
                 SET email_verificado = TRUE, 
                     token_verificacao = NULL, 
                     data_verificacao = NOW() 
-                WHERE id_usuario = ?";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$idUsuario]);
-    }
-
-    /**
-     * Conclui o primeiro acesso do usuário
-     */
-    public function concluirPrimeiroAcesso(int $idUsuario): bool
-    {
-        $sql = "UPDATE usuario 
-                SET primeiro_acesso = FALSE,
-                    data_primeiro_acesso = NOW()
                 WHERE id_usuario = ?";
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([$idUsuario]);
@@ -316,33 +317,6 @@ class Usuario
     }
 
     /**
-     * Usuários com primeiro acesso pendente
-     */
-    public function getPrimeiroAcessoPendentes(): array
-    {
-        $sql = "SELECT u.*, p.perfil as nome_perfil 
-                FROM usuario u
-                LEFT JOIN perfil p ON u.id_perfil = p.id_perfil
-                WHERE u.ativo = TRUE AND u.primeiro_acesso = TRUE 
-                ORDER BY u.data_criacao DESC";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Conta usuários com primeiro acesso pendente
-     */
-    public function contarPrimeiroAcessoPendentes(): int
-    {
-        $sql = "SELECT COUNT(*) as total FROM usuario WHERE ativo = TRUE AND primeiro_acesso = TRUE";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int) ($resultado['total'] ?? 0);
-    }
-
-    /**
      * Atualiza o perfil do usuário
      */
     public function atualizarPerfil(int $idUsuario, int $idPerfil): bool
@@ -374,4 +348,12 @@ class Usuario
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
         return $resultado ?: null;
     }
+
+    // ============================================================
+    // REMOVIDO: Métodos relacionados a primeiro acesso
+    // - getPrimeiroAcessoPendentes()
+    // - contarPrimeiroAcessoPendentes()
+    // - concluirPrimeiroAcesso()
+    // - resetarSenhaPrimeiroAcesso()
+    // ============================================================
 }

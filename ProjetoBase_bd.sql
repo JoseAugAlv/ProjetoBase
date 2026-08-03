@@ -166,3 +166,5 @@ UNION ALL
 SELECT 'pendente@projetobase.com', '123', 'Usuario (Primeiro Acesso)'
 UNION ALL
 SELECT 'inativo@projetobase.com', '123', 'Usuario (Inativo)';
+
+UPDATE usuario SET primeiro_acesso = FALSE WHERE primeiro_acesso = TRUE;

@@ -26,7 +26,6 @@ class UsuarioController
 
         $role = (int) $_SESSION['usuario']['role'];
         
-        // Apenas Admin (2) e Master (1) podem ver
         if (!in_array($role, [1, 2])) {
             http_response_code(403);
             echo "<h1>403 - Acesso Negado</h1>";
@@ -106,7 +105,6 @@ class UsuarioController
         $idPerfil = (int) ($_POST['id_perfil'] ?? 4);
         $senha = $_POST['senha'] ?? '';
 
-        // Validações
         if (empty($nome) || empty($email)) {
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Nome e e-mail são obrigatórios.'];
             header('Location: ' . App::getBasePath() . '/usuarios/criar');
@@ -125,12 +123,10 @@ class UsuarioController
             exit;
         }
 
-        // Se não enviou senha, gera uma automática
         if (empty($senha)) {
-            $senha = bin2hex(random_bytes(4)); // 8 caracteres
+            $senha = bin2hex(random_bytes(4));
         }
 
-        // Validar força da senha (se foi enviada)
         if (strlen($senha) < 6) {
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'A senha deve ter no mínimo 6 caracteres.'];
             header('Location: ' . App::getBasePath() . '/usuarios/criar');
@@ -141,6 +137,9 @@ class UsuarioController
             $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
             $token = bin2hex(random_bytes(32));
 
+            // ============================================================
+            // REMOVIDO: primeiro_acesso = FALSE diretamente
+            // ============================================================
             $idUsuario = $this->usuario->create([
                 'nome' => $nome,
                 'email' => $email,
@@ -149,11 +148,10 @@ class UsuarioController
                 'data_nascimento' => $dataNascimento,
                 'id_perfil' => $idPerfil,
                 'token' => $token,
-                'email_verificado' => true, // Criado por admin já é verificado
+                'email_verificado' => true,
                 'primeiro_acesso' => false
             ]);
 
-            // Log
             require_once __DIR__ . '/../Helpers/SecurityHelper.php';
             SecurityHelper::logAuditoria(
                 'criar_usuario',
@@ -281,7 +279,6 @@ class UsuarioController
                 'ativo' => $ativo
             ];
 
-            // Se enviou senha, atualiza
             if (!empty($senha)) {
                 if (strlen($senha) < 6) {
                     $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'A senha deve ter no mínimo 6 caracteres.'];
@@ -293,7 +290,6 @@ class UsuarioController
 
             $this->usuario->update($id, $dados);
 
-            // Log
             require_once __DIR__ . '/../Helpers/SecurityHelper.php';
             SecurityHelper::logAuditoria(
                 'atualizar_usuario',
@@ -328,7 +324,6 @@ class UsuarioController
 
         $role = (int) $_SESSION['usuario']['role'];
         
-        // Apenas Master pode excluir
         if ($role !== 1) {
             http_response_code(403);
             echo "<h1>403 - Acesso Negado</h1>";
@@ -344,7 +339,6 @@ class UsuarioController
             exit;
         }
 
-        // Não pode excluir a si mesmo
         if ($id == $_SESSION['usuario']['id']) {
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Você não pode excluir sua própria conta.'];
             header('Location: ' . App::getBasePath() . '/usuarios');
@@ -352,12 +346,9 @@ class UsuarioController
         }
 
         try {
-            // Buscar usuário para log
             $usuario = $this->usuario->findById($id);
-            
-            $this->usuario->update($id, ['ativo' => 0]); // Desativa em vez de excluir
+            $this->usuario->update($id, ['ativo' => 0]);
 
-            // Log
             require_once __DIR__ . '/../Helpers/SecurityHelper.php';
             SecurityHelper::logAuditoria(
                 'excluir_usuario',
@@ -378,7 +369,7 @@ class UsuarioController
     }
 
     /**
-     * Atribuir perfil - MASTER (pode atribuir qualquer perfil)
+     * Atribuir perfil - MASTER
      */
     public function atribuirPerfilMaster()
     {
@@ -401,7 +392,6 @@ class UsuarioController
         }
 
         if ($this->usuario->atualizarPerfil($idUsuario, $idPerfil)) {
-            // Log
             require_once __DIR__ . '/../Helpers/SecurityHelper.php';
             SecurityHelper::logAuditoria(
                 'atribuir_perfil_master',
@@ -434,7 +424,6 @@ class UsuarioController
 
         $role = (int) $_SESSION['usuario']['role'];
         
-        // Apenas Admin (2) pode usar esta função
         if ($role !== 2) {
             http_response_code(403);
             echo "<h1>403 - Acesso Negado</h1>";
@@ -450,7 +439,6 @@ class UsuarioController
             exit;
         }
 
-        // Admin só pode atribuir Operador (3) ou Usuario (4)
         if (!in_array($idPerfil, [3, 4])) {
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Você só pode atribuir perfis Operador ou Usuario.'];
             header('Location: ' . App::getBasePath() . '/usuarios');
@@ -458,7 +446,6 @@ class UsuarioController
         }
 
         if ($this->usuario->atualizarPerfil($idUsuario, $idPerfil)) {
-            // Log
             require_once __DIR__ . '/../Helpers/SecurityHelper.php';
             SecurityHelper::logAuditoria(
                 'atribuir_perfil_admin',
@@ -476,23 +463,8 @@ class UsuarioController
         exit;
     }
 
-    /**
-     * Lista usuários com primeiro acesso pendente
-     */
-    public function pendentes()
-    {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
-        }
-
-        $pendentes = $this->usuario->getPrimeiroAcessoPendentes();
-        $totalPendentes = count($pendentes);
-        
-        $tituloPagina = 'Primeiro Acesso Pendente - ' . App::getName();
-        $cssPagina = 'usuarios.css';
-        
-        require '../app/Views/usuarios/primeiro_acesso_pendentes.php';
-    }
-
+    // ============================================================
+    // REMOVIDO: Métodos relacionados a primeiro acesso pendente
+    // - pendentes()
+    // ============================================================
 }
