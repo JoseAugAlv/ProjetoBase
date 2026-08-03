@@ -56,7 +56,6 @@ class HomeController
         
         $totalUsuarios = $this->usuario->getTotal();
         $totalAtivos = $this->usuario->getTotalAtivos();
-        $primeiroAcessoPendentes = $this->usuario->contarPrimeiroAcessoPendentes();
         $perfis = $this->usuario->getCountByPerfil();
         
         $tituloPagina = 'Dashboard - ' . $appName;
