@@ -1,12 +1,7 @@
 <?php
-// app/Controllers/RelatoriosController.php
+// app/Controllers/RelatoriosController.php — relatórios e exportação (módulo 'export')
 
-require_once __DIR__ . '/../Core/App.php';
-require_once __DIR__ . '/../Models/Usuario.php';
-require_once __DIR__ . '/../Helpers/ExcelHelper.php';
-require_once __DIR__ . '/../Helpers/PdfHelper.php';
-
-class RelatoriosController
+class RelatoriosController extends BaseController
 {
     private $usuario;
 
@@ -15,67 +10,51 @@ class RelatoriosController
         $this->usuario = new Usuario();
     }
 
-    /**
-     * Página de relatórios (apenas Admin)
-     */
     public function usuarios()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 2) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
-        }
-
-        $usuarios = $this->usuario->getAll();
-        $tituloPagina = 'Relatório de Usuários - ' . App::getName();
-        $cssPagina = 'home.css';
-        
-        require '../app/Views/relatorios/usuarios.php';
+        $this->view('relatorios/usuarios', ['usuarios' => $this->usuario->listar()]);
     }
 
-    /**
-     * Exportar para Excel
-     */
     public function exportar()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 2) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
-        }
+        $this->exigirModuloExport();
+        $this->log('exportar_excel', 'Relatório de usuários');
 
-        $usuarios = $this->usuario->getAll();
-        $dados = ExcelHelper::prepararDados($usuarios);
+        $dados = array_map(function ($u) {
+            return [
+                'ID' => $u['id_usuario'],
+                'Nome' => $u['nome'],
+                'E-mail' => $u['email'],
+                'Telefone' => $u['telefone'],
+                'Perfil' => $u['nome_perfil'],
+                'Ativo' => $u['ativo'] ? 'Sim' : 'Não',
+                'Criado em' => $u['data_criacao'],
+            ];
+        }, $this->usuario->listar());
+
         ExcelHelper::gerar($dados, 'usuarios_' . date('Y-m-d') . '.xls', 'Relatório de Usuários');
     }
 
-    /**
-     * Exportar para PDF
-     */
     public function pdf()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 2) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
+        $this->exigirModuloExport();
+        $this->log('exportar_pdf', 'Relatório de usuários');
+
+        $html = '<h1>Relatório de Usuários</h1><p>Gerado em: ' . date('d/m/Y H:i') . '</p>'
+            . '<table border="1" cellpadding="5"><tr><th>ID</th><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th></tr>';
+
+        foreach ($this->usuario->listar() as $u) {
+            $html .= '<tr><td>' . (int) $u['id_usuario'] . '</td><td>' . e($u['nome']) . '</td><td>' . e($u['email'])
+                . '</td><td>' . e($u['nome_perfil'] ?? '') . '</td><td>' . ($u['ativo'] ? 'Ativo' : 'Inativo') . '</td></tr>';
         }
 
-        $usuarios = $this->usuario->getAll();
-        
-        $html = '<h1>Relatório de Usuários</h1>';
-        $html .= '<p>Gerado em: ' . date('d/m/Y H:i:s') . '</p>';
-        $html .= '<table border="1" cellpadding="5">';
-        $html .= '<tr><th>ID</th><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th></tr>';
-        
-        foreach ($usuarios as $u) {
-            $html .= '<tr>';
-            $html .= '<td>' . $u['id_usuario'] . '</td>';
-            $html .= '<td>' . htmlspecialchars($u['nome']) . '</td>';
-            $html .= '<td>' . htmlspecialchars($u['email']) . '</td>';
-            $html .= '<td>' . htmlspecialchars($u['nome_perfil'] ?? 'Usuario') . '</td>';
-            $html .= '<td>' . ($u['ativo'] ? 'Ativo' : 'Inativo') . '</td>';
-            $html .= '</tr>';
+        PdfHelper::gerar($html . '</table>', 'relatorio_usuarios_' . date('Y-m-d') . '.pdf');
+    }
+
+    private function exigirModuloExport(): void
+    {
+        if (!MenuHelper::isModuleEnabled('export')) {
+            $this->abort(404);
         }
-        
-        $html .= '</table>';
-        
-        PdfHelper::gerar($html, 'relatorio_usuarios_' . date('Y-m-d') . '.pdf');
     }
 }

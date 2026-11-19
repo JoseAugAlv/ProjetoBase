@@ -8,20 +8,7 @@ $appName = App::getName();
 
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
-
-if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-    header('Location: ' . $basePath . '/');
-    exit;
-}
-
-if (isset($_SESSION['flash'])) {
-    $flash = $_SESSION['flash'];
-    echo '<div class="flash-' . $flash['tipo'] . '">' . htmlspecialchars($flash['mensagem']) . '</div>';
-    unset($_SESSION['flash']);
-}
-
-$pdo = Database::getConnection();
-$perfis = $pdo->query("SELECT * FROM perfil ORDER BY id_perfil")->fetchAll(PDO::FETCH_ASSOC);
+// $usuarios e $perfis vêm do MasterController::usuarios()
 ?>
 
 <section class="master-section animate-in">
@@ -93,7 +80,12 @@ $perfis = $pdo->query("SELECT * FROM perfil ORDER BY id_perfil")->fetchAll(PDO::
                                         </span>
                                     </td>
                                     <td>
-                                        <button onclick="abrirModalAtribuir(<?= $usuario['id_usuario'] ?>, '<?= addslashes($usuario['nome']) ?>', '<?= $usuario['id_perfil'] ?? 4 ?>')" class="btn btn-sm btn-primary">
+                                        <?php /* dados em data-* escapados: nunca colocar texto do usuário dentro de onclick */ ?>
+                                        <button type="button" class="btn btn-sm btn-primary js-atribuir"
+                                                data-id="<?= (int) $usuario['id_usuario'] ?>"
+                                                data-nome="<?= e($usuario['nome']) ?>"
+                                                data-perfil="<?= (int) ($usuario['id_perfil'] ?? 4) ?>"
+                                                onclick="abrirModalAtribuir(this.dataset.id, this.dataset.nome, this.dataset.perfil)">
                                             <i class="fas fa-user-tag"></i> Atribuir Perfil
                                         </button>
                                     </td>

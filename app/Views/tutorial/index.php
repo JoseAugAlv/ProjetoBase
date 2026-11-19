@@ -2555,19 +2555,19 @@ ProjetoBase/
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>HTML5</strong></td>
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;"><code>required</code>, <code>type</code>, <code>maxlength</code></td>
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;">UX rápida</td>
-                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#ef4444;">❌ Não</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#ef4444;"><i class="fas fa-times" aria-hidden="true"></i> Não</td>
                             </tr>
                             <tr>
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong>JavaScript</strong></td>
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;">onkeyup / onsubmit</td>
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;">Feedback em tempo real</td>
-                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#ef4444;">❌ Não</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#ef4444;"><i class="fas fa-times" aria-hidden="true"></i> Não</td>
                             </tr>
                             <tr>
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;"><strong style="color:#10b981;">PHP (servidor)</strong></td>
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;">Controller</td>
                                 <td style="padding:8px 16px;border:1px solid #e2e8f0;">Segurança real</td>
-                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#10b981;">✅ Sim, sempre</td>
+                                <td style="padding:8px 16px;border:1px solid #e2e8f0;color:#10b981;"><i class="fas fa-check" aria-hidden="true"></i> Sim, sempre</td>
                             </tr>
                         </tbody>
                     </table>

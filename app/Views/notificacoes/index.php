@@ -9,16 +9,7 @@ $appName = App::getName();
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 
-if (!isset($_SESSION['usuario'])) {
-    header('Location: ' . $basePath . '/login');
-    exit;
-}
 
-if (isset($_SESSION['flash'])) {
-    $flash = $_SESSION['flash'];
-    echo '<div class="flash-' . $flash['tipo'] . '">' . htmlspecialchars($flash['mensagem']) . '</div>';
-    unset($_SESSION['flash']);
-}
 
 $naoLidas = 0;
 $notificacoesNovas = [];

@@ -1,0 +1,168 @@
+/* ============================================================
+   public/css/acessibilidade.css — menu de acessibilidade
+   ============================================================ */
+
+/* ---------- Tema escuro (inversão inteligente) ----------
+   Funciona em qualquer página, mesmo com cores fixas no CSS/HTML.
+   Mídias e elementos com [data-no-invert] são desinvertidos para manter as cores reais. */
+html[data-tema="escuro"] {
+    background: #fff; /* vira preto após a inversão */
+}
+html[data-tema="escuro"] img,
+html[data-tema="escuro"] picture,
+html[data-tema="escuro"] video,
+html[data-tema="escuro"] iframe,
+html[data-tema="escuro"] canvas,
+html[data-tema="escuro"] [style*="background-image"],
+html[data-tema="escuro"] [data-no-invert] {
+    filter: invert(1) hue-rotate(180deg);
+}
+/* Não desinverter de novo o que está dentro de um elemento já desinvertido */
+html[data-tema="escuro"] [data-no-invert] img,
+html[data-tema="escuro"] [data-no-invert] video,
+html[data-tema="escuro"] [data-no-invert] iframe,
+html[data-tema="escuro"] [data-no-invert] canvas,
+html[data-tema="escuro"] [data-no-invert] [data-no-invert] {
+    filter: none;
+}
+
+/* ---------- Destacar links ---------- */
+html[data-links="destacar"] a:not(.btn) {
+    text-decoration: underline !important;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+}
+html[data-links="destacar"] a:focus-visible,
+html[data-links="destacar"] a:hover {
+    outline: 3px solid #f59e0b;
+    outline-offset: 2px;
+}
+
+/* Foco sempre visível para quem navega pelo teclado */
+:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* ---------- Botão flutuante ---------- */
+.pb-a11y {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 9998;
+    font-family: var(--font-primary, system-ui, sans-serif);
+    font-size: 16px;            /* não escala junto com o texto da página */
+    line-height: 1.4;
+}
+
+.pb-a11y-toggle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+    background: #1d4ed8;
+    color: #ffffff;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .15s ease;
+}
+.pb-a11y-toggle:hover { transform: scale(1.06); }
+
+/* ---------- Painel ---------- */
+.pb-a11y-painel {
+    position: absolute;
+    left: 0;
+    bottom: 68px;
+    width: min(320px, calc(100vw - 32px));
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+    padding: 16px;
+}
+.pb-a11y-painel[hidden] { display: none; }
+
+.pb-a11y-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.pb-a11y-cabecalho h2 {
+    font-size: 18px;
+    margin: 0;
+    color: #111827;
+}
+.pb-a11y-fechar {
+    border: 0;
+    background: transparent;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    color: #374151;
+    padding: 0 6px;
+}
+
+.pb-a11y-grupo {
+    border-top: 1px solid #e5e7eb;
+    padding: 12px 0;
+}
+.pb-a11y-rotulo {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #4b5563;
+    margin-bottom: 8px;
+}
+.pb-a11y-opcoes {
+    display: flex;
+    gap: 8px;
+}
+.pb-a11y-opcoes-coluna { flex-direction: column; }
+
+.pb-a11y-opcoes button,
+.pb-a11y-resetar {
+    flex: 1;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #111827;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pb-a11y-opcoes:not(.pb-a11y-opcoes-coluna) button { justify-content: center; }
+.pb-a11y-opcoes button small { font-weight: 400; color: #6b7280; }
+.pb-a11y-opcoes button:hover,
+.pb-a11y-resetar:hover { border-color: #1d4ed8; }
+.pb-a11y-opcoes button[aria-pressed="true"] {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #ffffff;
+}
+.pb-a11y-opcoes button[aria-pressed="true"] small { color: #dbeafe; }
+
+.pb-a11y-resetar {
+    width: 100%;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pb-a11y-toggle { transition: none; }
+}

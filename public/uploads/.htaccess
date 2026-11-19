@@ -1,3 +1,12 @@
-<FilesMatch "\.(php|phtml|php3|php4|php5|phar)$">
-    Deny from all
+# Uploads: nunca executar scripts enviados por usuários
+Options -Indexes -ExecCGI
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar .pht .shtml .cgi .pl .py
+<FilesMatch "\.(php\d?|phtml|phar|pht|shtml|cgi|pl|py|sh|htaccess)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
 </FilesMatch>

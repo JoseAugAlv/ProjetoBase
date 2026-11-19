@@ -13,18 +13,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isset($_SESSION['usuario']) || !in_array($_SESSION['usuario']['role'], [1, 2])) {
-    header('Location: ' . $basePath . '/');
-    exit;
-}
 
-if (isset($_SESSION['flash'])) {
-    $flash = $_SESSION['flash'];
-    echo '<div class="flash-' . $flash['tipo'] . '">' . htmlspecialchars($flash['mensagem']) . '</div>';
-    unset($_SESSION['flash']);
-}
 
-$perfis = $this->usuario->getPerfis() ?? [];
+// $perfis vem do UsuarioController::criar() (só os perfis que o logado pode atribuir)
 ?>
 
 <section class="usuarios-section animate-in">
@@ -91,8 +82,8 @@ $perfis = $this->usuario->getPerfis() ?? [];
                     <!-- Senha -->
                     <div class="form-group">
                         <label for="senha">Senha</label>
-                        <input type="password" id="senha" name="senha" class="form-control" placeholder="Deixe em branco para gerar automática" minlength="6">
-                        <span class="form-help">Mínimo 6 caracteres.</span>
+                        <input type="password" id="senha" name="senha" class="form-control" placeholder="Opcional: em branco, o usuário define pelo e-mail" minlength="8">
+                        <span class="form-help">Se ficar em branco, enviamos um link para o usuário criar a própria senha.</span>
                     </div>
                 </div>
 

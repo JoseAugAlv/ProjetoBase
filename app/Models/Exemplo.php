@@ -1,15 +1,14 @@
 <?php
-// app/Models/Exemplo.php
-
-require_once __DIR__ . '/../Core/Model.php';
+// app/Models/Exemplo.php — tabela `exemplo` (modelo para copiar ao criar um model novo)
 
 class Exemplo extends Model
 {
-    public function __construct()
-    {
-        parent::__construct();
-        $this->table = 'exemplo';
-    }
+    protected $table = 'exemplo';
+    protected $primaryKey = 'id_exemplo';
 
-    // Métodos customizados podem ser adicionados aqui
+    // Métodos específicos da tabela entram aqui. Ex:
+    // public function ativos(): array
+    // {
+    //     return $this->where(['status' => 'ativo'], 'nome');
+    // }
 }

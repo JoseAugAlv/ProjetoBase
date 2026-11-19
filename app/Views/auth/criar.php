@@ -9,12 +9,7 @@ $appName = App::getName();
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 
-if (isset($_SESSION['flash'])): ?>
-    <div class="flash-<?= $_SESSION['flash']['tipo'] ?>">
-        <?= htmlspecialchars($_SESSION['flash']['mensagem']) ?>
-    </div>
-    <?php unset($_SESSION['flash']); ?>
-<?php endif; ?>
+?>
 
 <section class="auth-section animate-in">
     <div class="auth-container">
@@ -40,13 +35,13 @@ if (isset($_SESSION['flash'])): ?>
                     
                     <div class="form-group">
                         <label for="senha">Senha <span class="required">*</span></label>
-                        <input type="password" id="senha" name="senha" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6" onkeyup="atualizarRequisitosSenha()">
+                        <input type="password" id="senha" name="senha" class="form-control" placeholder="Mínimo 8 caracteres" required minlength="8" onkeyup="atualizarRequisitosSenha()">
                         <div id="requisitos_senha" style="margin-top:5px;"></div>
                     </div>
                     
                     <div class="form-group">
                         <label for="senha_confirm">Confirmar Senha <span class="required">*</span></label>
-                        <input type="password" id="senha_confirm" name="senha_confirm" class="form-control" placeholder="Repita a senha" required minlength="6">
+                        <input type="password" id="senha_confirm" name="senha_confirm" class="form-control" placeholder="Repita a senha" required minlength="8">
                     </div>
                     
                     <div class="form-group">
@@ -62,6 +57,8 @@ if (isset($_SESSION['flash'])): ?>
 
                 <button type="submit" class="btn btn-primary btn-full">Cadastrar</button>
             </form>
+
+            <?php $textoGoogle = 'Cadastrar com Google'; require __DIR__ . '/_google.php'; ?>
 
             <div class="auth-footer">
                 <p>Já tem conta? <a href="<?= $basePath ?>/login">Faça login</a></p>
@@ -80,8 +77,8 @@ function validarFormulario() {
         return false;
     }
     
-    if (senha.length < 6) {
-        Swal.fire({ icon: 'error', title: 'Senha fraca!', text: 'A senha deve ter no mínimo 6 caracteres.', confirmButtonColor: '#dc3545' });
+    if (senha.length < 8) {
+        Swal.fire({ icon: 'error', title: 'Senha fraca!', text: 'A senha deve ter no mínimo 8 caracteres.', confirmButtonColor: '#dc3545' });
         return false;
     }
     
@@ -98,16 +95,16 @@ function atualizarRequisitosSenha() {
     }
     
     var html = '<ul style="list-style:none; padding:0; font-size:12px; margin:5px 0;">';
-    var ok = senha.length >= 6;
-    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '✅' : '❌') + ' Mínimo 6 caracteres</li>';
+    var ok = senha.length >= 8;
+    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-times" aria-hidden="true"></i>') + ' Mínimo 8 caracteres</li>';
     ok = /[A-Z]/.test(senha);
-    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '✅' : '❌') + ' Letra maiúscula</li>';
+    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-times" aria-hidden="true"></i>') + ' Letra maiúscula</li>';
     ok = /[a-z]/.test(senha);
-    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '✅' : '❌') + ' Letra minúscula</li>';
+    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-times" aria-hidden="true"></i>') + ' Letra minúscula</li>';
     ok = /[0-9]/.test(senha);
-    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '✅' : '❌') + ' Número</li>';
+    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-times" aria-hidden="true"></i>') + ' Número</li>';
     ok = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(senha);
-    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '✅' : '❌') + ' Caractere especial</li>';
+    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-times" aria-hidden="true"></i>') + ' Caractere especial</li>';
     html += '</ul>';
     requisitos.innerHTML = html;
 }

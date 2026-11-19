@@ -1,79 +1,71 @@
 <?php
 // app/Helpers/UploadHelper.php
-
-require_once __DIR__ . '/SecurityHelper.php';
-require_once __DIR__ . '/../Core/App.php';
+// Upload seguro para public/uploads/{pasta}:
+//   $r = UploadHelper::upload($_FILES['foto'], 'fotos', ['jpg', 'png', 'webp']);
+//   if ($r['success']) { $caminho = $r['arquivo']; } // salvar no banco; exibir com asset('uploads/' . $caminho)
+// Nome do arquivo é sempre gerado (nunca o enviado), tipo real conferido e PHP bloqueado na pasta.
 
 class UploadHelper
 {
-    public static function upload($arquivo, $pasta, $tiposPermitidos = ['pdf', 'jpg', 'jpeg', 'png', 'webp'], $tamanhoMaximo = 2097152)
+    private const MIMES = [
+        'pdf' => 'application/pdf',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+        'zip' => 'application/zip',
+    ];
+
+    public static function upload($arquivo, string $pasta, array $tiposPermitidos = ['pdf', 'jpg', 'jpeg', 'png', 'webp'], int $tamanhoMaximo = 2097152): array
     {
-        // 1. Verificar erro
-        if ($arquivo['error'] !== UPLOAD_ERR_OK) {
-            return ['success' => false, 'message' => 'Erro ao fazer upload do arquivo.'];
+        if (!is_array($arquivo) || ($arquivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($arquivo['tmp_name'])) {
+            return ['success' => false, 'message' => 'Erro ao enviar o arquivo.'];
         }
 
-        // 2. Validar extensão
+        if (!preg_match('/^[a-zA-Z0-9_\-\/]+$/', $pasta) || strpos($pasta, '..') !== false) {
+            return ['success' => false, 'message' => 'Pasta de destino inválida.'];
+        }
+
         $extensao = strtolower(pathinfo($arquivo['name'], PATHINFO_EXTENSION));
-        if (!in_array($extensao, $tiposPermitidos)) {
+        $tiposPermitidos = array_intersect(array_map('strtolower', $tiposPermitidos), array_keys(self::MIMES));
+        if (!in_array($extensao, $tiposPermitidos, true)) {
             return ['success' => false, 'message' => 'Formato de arquivo não permitido.'];
         }
 
-        // 3. Validar tamanho
         if ($arquivo['size'] > $tamanhoMaximo) {
-            return ['success' => false, 'message' => 'Arquivo muito grande.'];
+            return ['success' => false, 'message' => 'Arquivo muito grande (máx. ' . round($tamanhoMaximo / 1048576, 1) . ' MB).'];
         }
 
-        // 4. Validar MIME real
-        $mimesPermitidos = self::getPermittedMimes($tiposPermitidos);
-        if (!SecurityHelper::validarMimeArquivo($arquivo['tmp_name'], $mimesPermitidos)) {
-            return ['success' => false, 'message' => 'Tipo de arquivo inválido.'];
+        $mimes = array_unique(array_map(function ($ext) {
+            return self::MIMES[$ext];
+        }, $tiposPermitidos));
+        if (!SecurityHelper::validarMimeArquivo($arquivo['tmp_name'], $mimes)) {
+            return ['success' => false, 'message' => 'O conteúdo do arquivo não corresponde ao tipo permitido.'];
         }
 
-        // 5. Criar pasta com caminho dinâmico
-        $caminhoCompleto = $_SERVER['DOCUMENT_ROOT'] . App::getBasePath() . '/public/' . $pasta;
-        if (!file_exists($caminhoCompleto)) {
-            mkdir($caminhoCompleto, 0755, true);
+        $destino = ROOT_PATH . '/public/uploads/' . trim($pasta, '/');
+        if (!is_dir($destino)) {
+            mkdir($destino, 0755, true);
         }
 
-        // 6. Gerar nome único
-        $nomeArquivo = time() . '_' . bin2hex(random_bytes(8)) . '.' . $extensao;
-        $caminhoArquivo = $caminhoCompleto . '/' . $nomeArquivo;
-
-        // 7. Mover arquivo
-        if (move_uploaded_file($arquivo['tmp_name'], $caminhoArquivo)) {
-            SecurityHelper::logAuditoria(
-                'upload_arquivo',
-                $_SESSION['usuario']['id'] ?? 'anonymous',
-                'Arquivo: ' . $nomeArquivo,
-                'info'
-            );
-
-            return ['success' => true, 'arquivo' => $pasta . '/' . $nomeArquivo];
+        $nome = date('YmdHis') . '_' . bin2hex(random_bytes(8)) . '.' . $extensao;
+        if (!move_uploaded_file($arquivo['tmp_name'], $destino . '/' . $nome)) {
+            return ['success' => false, 'message' => 'Erro ao salvar o arquivo.'];
         }
 
-        return ['success' => false, 'message' => 'Erro ao salvar o arquivo.'];
+        SecurityHelper::logAuditoria('upload_arquivo', Auth::id() ?? 'anonimo', 'Arquivo: ' . $pasta . '/' . $nome);
+        return ['success' => true, 'arquivo' => trim($pasta, '/') . '/' . $nome];
     }
 
-    private static function getPermittedMimes($extensoes)
+    /** Remove um arquivo enviado (caminho relativo a public/uploads). */
+    public static function remover(string $caminhoRelativo): bool
     {
-        $mimeMap = [
-            'pdf' => 'application/pdf',
-            'jpg' => 'image/jpeg',
-            'jpeg' => 'image/jpeg',
-            'png' => 'image/png',
-            'webp' => 'image/webp',
-            'gif' => 'image/gif',
-            'zip' => 'application/zip'
-        ];
-
-        $mimes = [];
-        foreach ($extensoes as $ext) {
-            if (isset($mimeMap[$ext])) {
-                $mimes[] = $mimeMap[$ext];
-            }
+        $base = realpath(ROOT_PATH . '/public/uploads');
+        $alvo = realpath(ROOT_PATH . '/public/uploads/' . $caminhoRelativo);
+        if ($base && $alvo && strpos($alvo, $base . DIRECTORY_SEPARATOR) === 0 && is_file($alvo)) {
+            return unlink($alvo);
         }
-
-        return array_unique($mimes);
+        return false;
     }
 }

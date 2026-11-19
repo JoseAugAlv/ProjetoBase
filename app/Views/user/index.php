@@ -13,16 +13,7 @@ require_once __DIR__ . '/../layouts/nav.php';
 
 $usuario = $usuarioPerfil;
 
-if (!isset($_SESSION['usuario'])) {
-    header('Location: ' . $basePath . '/login');
-    exit;
-}
 
-if (isset($_SESSION['flash'])) {
-    $flash = $_SESSION['flash'];
-    echo '<div class="flash-' . $flash['tipo'] . '">' . htmlspecialchars($flash['mensagem']) . '</div>';
-    unset($_SESSION['flash']);
-}
 
 if (!isset($usuario) || empty($usuario)) {
     echo '<div class="flash-erro">Erro: Dados do usuario nao encontrados.</div>';

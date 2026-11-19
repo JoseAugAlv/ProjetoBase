@@ -1,141 +1,87 @@
 <?php
 // app/Controllers/MasterController.php
+// Área do Master: painel, configurações, usuários e backup do banco.
 
-require_once __DIR__ . '/../Core/App.php';
-require_once __DIR__ . '/../Models/Usuario.php';
-require_once __DIR__ . '/../Config/database.php';
-require_once __DIR__ . '/../Helpers/MenuHelper.php';
-
-class MasterController
+class MasterController extends BaseController
 {
     public function index()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
-        }
-
-        $tituloPagina = 'Área Master - ' . App::getName();
-        $cssPagina = 'master.css';
-        require_once __DIR__ . '/../Views/master/index.php';
+        $this->view('master/index');
     }
+
+    public function configuracoes()
+    {
+        $this->view('master/configuracoes', ['totalUsuarios' => (new Usuario())->getTotal()]);
+    }
+
+    public function usuarios()
+    {
+        $usuario = new Usuario();
+        $this->view('master/usuarios', [
+            'usuarios' => $usuario->listar(),
+            'perfis' => $usuario->getPerfis(),
+        ]);
+    }
+
+    // ------------------------------------------------------------
+    // BACKUP (módulo 'backup' em app/Config/modules.php)
+    // Arquivos ficam em /backups, fora de public/ e bloqueados por .htaccess.
+    // ------------------------------------------------------------
 
     public function backup()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
-        }
-
-        if (!MenuHelper::isModuleEnabled('backup')) {
-            http_response_code(404);
-            echo "<h1>404 - Módulo não encontrado</h1>";
-            exit;
-        }
-
-        $tituloPagina = 'Backup - ' . App::getName();
-        $cssPagina = 'master.css';
-        require_once __DIR__ . '/../Views/master/backup.php';
+        $arquivos = glob($this->pastaBackup() . '/*.sql') ?: [];
+        rsort($arquivos);
+        $this->view('master/backup', ['backups' => $arquivos]);
     }
 
     public function exportarBackup()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
-        }
-
-        if (!MenuHelper::isModuleEnabled('backup')) {
-            http_response_code(404);
-            exit;
-        }
-
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
-
+        @set_time_limit(300);
         $pdo = Database::getConnection();
-        $dbname = App::get('DB_NAME', 'ProjetoBase');
 
-        try {
-            $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-            $sql = "-- Backup do banco: {$dbname}\n-- Data: " . date('Y-m-d H:i:s') . "\n\n";
+        $sql = "-- Backup do banco: " . App::get('DB_NAME') . "\n-- Data: " . date('Y-m-d H:i:s') . "\n\n"
+            . "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
 
-            foreach ($tables as $table) {
-                $create = $pdo->query("SHOW CREATE TABLE {$table}")->fetch(PDO::FETCH_ASSOC);
-                $sql .= $create['Create Table'] . ";\n\n";
+        foreach ($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $tabela) {
+            $t = '`' . str_replace('`', '``', $tabela) . '`';
+            $create = $pdo->query("SHOW CREATE TABLE {$t}")->fetch(PDO::FETCH_NUM);
+            $sql .= "DROP TABLE IF EXISTS {$t};\n" . $create[1] . ";\n\n";
 
-                $rows = $pdo->query("SELECT * FROM {$table}")->fetchAll(PDO::FETCH_ASSOC);
-                if ($rows) {
-                    foreach ($rows as $row) {
-                        $values = array_map(function($v) use ($pdo) {
-                            return $v === null ? 'NULL' : $pdo->quote($v);
-                        }, $row);
-                        $sql .= "INSERT INTO {$table} (" . implode(', ', array_keys($row)) . ") VALUES (" . implode(', ', $values) . ");\n";
-                    }
-                    $sql .= "\n";
-                }
+            $stmt = $pdo->query("SELECT * FROM {$t}");
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $colunas = implode(', ', array_map(function ($c) {
+                    return '`' . str_replace('`', '``', $c) . '`';
+                }, array_keys($row)));
+                $valores = implode(', ', array_map(function ($v) use ($pdo) {
+                    return $v === null ? 'NULL' : $pdo->quote((string) $v);
+                }, $row));
+                $sql .= "INSERT INTO {$t} ({$colunas}) VALUES ({$valores});\n";
             }
+            $sql .= "\n";
+        }
+        $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
 
-            $pasta = $_SERVER['DOCUMENT_ROOT'] . App::getBasePath() . '/backups/';
-            if (!is_dir($pasta)) {
-                mkdir($pasta, 0755, true);
-            }
-
-            $arquivo = $pasta . 'backup_' . date('Y-m-d_His') . '.sql';
-            file_put_contents($arquivo, $sql);
-
-            require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-            SecurityHelper::logAuditoria(
-                'backup_exportar',
-                $_SESSION['usuario']['id'],
-                'Backup exportado: ' . basename($arquivo),
-                'info'
-            );
-
-            $_SESSION['flash'] = [
-                'tipo' => 'sucesso',
-                'mensagem' => 'Backup exportado com sucesso!'
-            ];
-
-        } catch (Exception $e) {
-            $_SESSION['flash'] = [
-                'tipo' => 'erro',
-                'mensagem' => 'Erro ao exportar backup: ' . $e->getMessage()
-            ];
+        $nome = 'backup_' . date('Y-m-d_His') . '.sql';
+        if (file_put_contents($this->pastaBackup() . '/' . $nome, $sql) === false) {
+            $this->redirectWith('/master/backup', 'erro', 'Não foi possível gravar o arquivo de backup.');
         }
 
-        header('Location: ' . App::getBasePath() . '/master/backup');
-        exit;
+        $this->log('backup_exportar', 'Backup gerado: ' . $nome);
+        $this->redirectWith('/master/backup', 'sucesso', 'Backup gerado com sucesso!');
     }
 
     public function downloadBackup()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
+        $caminho = $this->arquivoBackup((string) ($_GET['arquivo'] ?? ''));
+        if (!$caminho) {
+            $this->redirectWith('/master/backup', 'erro', 'Arquivo não encontrado.');
         }
 
-        if (!MenuHelper::isModuleEnabled('backup')) {
-            http_response_code(404);
-            exit;
+        $this->log('backup_download', 'Download: ' . basename($caminho));
+        while (ob_get_level() > 0) {
+            ob_end_clean();
         }
-
-        $arquivo = $_GET['arquivo'] ?? '';
-        if (empty($arquivo)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Arquivo não especificado.'];
-            header('Location: ' . App::getBasePath() . '/master/backup');
-            exit;
-        }
-
-        $pasta = $_SERVER['DOCUMENT_ROOT'] . App::getBasePath() . '/backups/';
-        $caminho = $pasta . basename($arquivo);
-
-        if (!file_exists($caminho)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Arquivo não encontrado.'];
-            header('Location: ' . App::getBasePath() . '/master/backup');
-            exit;
-        }
-
         header('Content-Type: application/sql');
         header('Content-Disposition: attachment; filename="' . basename($caminho) . '"');
         header('Content-Length: ' . filesize($caminho));
@@ -143,112 +89,34 @@ class MasterController
         exit;
     }
 
+    /** POST */
     public function excluirBackup()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
+        $caminho = $this->arquivoBackup((string) ($_POST['arquivo'] ?? ''));
+        if (!$caminho) {
+            $this->redirectWith('/master/backup', 'erro', 'Arquivo não encontrado.');
         }
 
-        if (!MenuHelper::isModuleEnabled('backup')) {
-            http_response_code(404);
-            exit;
-        }
-
-        $arquivo = $_GET['arquivo'] ?? '';
-        if (empty($arquivo)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Arquivo não especificado.'];
-            header('Location: ' . App::getBasePath() . '/master/backup');
-            exit;
-        }
-
-        $pasta = $_SERVER['DOCUMENT_ROOT'] . App::getBasePath() . '/backups/';
-        $caminho = $pasta . basename($arquivo);
-
-        if (file_exists($caminho)) {
-            unlink($caminho);
-            require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-            SecurityHelper::logAuditoria(
-                'backup_excluir',
-                $_SESSION['usuario']['id'],
-                'Backup excluído: ' . basename($arquivo),
-                'warning'
-            );
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Backup excluído com sucesso!'];
-        } else {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Arquivo não encontrado.'];
-        }
-
-        header('Location: ' . App::getBasePath() . '/master/backup');
-        exit;
+        unlink($caminho);
+        $this->log('backup_excluir', 'Backup excluído: ' . basename($caminho), null, null, 'warning');
+        $this->redirectWith('/master/backup', 'sucesso', 'Backup excluído com sucesso!');
     }
 
-    public function configuracoes()
+    private function pastaBackup(): string
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
+        $pasta = ROOT_PATH . '/backups';
+        if (!is_dir($pasta)) {
+            mkdir($pasta, 0750, true);
         }
-
-        $usuarioModel = new Usuario();
-        $totalUsuarios = $usuarioModel->getTotal();
-
-        $tituloPagina = 'Configurações - ' . App::getName();
-        $cssPagina = 'master.css';
-        require_once __DIR__ . '/../Views/master/configuracoes.php';
+        return $pasta;
     }
 
-    public function usuarios()
+    /** Só aceita nomes no formato gerado pelo sistema (bloqueia path traversal). */
+    private function arquivoBackup(string $nome): ?string
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
+        if (!preg_match('/^backup_\d{4}-\d{2}-\d{2}_\d{6}\.sql$/', $nome)) {
+            return null;
         }
-
-        $usuarioModel = new Usuario();
-        $usuarios = $usuarioModel->getAll();
-
-        $tituloPagina = 'Master Usuários - ' . App::getName();
-        $cssPagina = 'master.css';
-        require_once __DIR__ . '/../Views/master/usuarios.php';
-    }
-
-    public function atribuirPerfil()
-    {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
-        }
-
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
-
-        $idUsuario = (int) ($_POST['id_usuario'] ?? 0);
-        $idPerfil = (int) ($_POST['id_perfil'] ?? 0);
-
-        if (!$idUsuario || !$idPerfil) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Dados inválidos.'];
-            header('Location: ' . App::getBasePath() . '/master/usuarios');
-            exit;
-        }
-
-        $usuarioModel = new Usuario();
-        
-        if ($usuarioModel->atualizarPerfil($idUsuario, $idPerfil)) {
-            require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-            SecurityHelper::logAuditoria(
-                'atribuir_perfil_master',
-                $_SESSION['usuario']['id'],
-                "Perfil atribuído: Usuário ID {$idUsuario} -> Perfil ID {$idPerfil}",
-                'info'
-            );
-
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Perfil atribuído com sucesso!'];
-        } else {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao atribuir perfil.'];
-        }
-
-        header('Location: ' . App::getBasePath() . '/master/usuarios');
-        exit;
+        return SecurityHelper::sanitizarCaminhoArquivo($nome, $this->pastaBackup(), ['sql']);
     }
 }

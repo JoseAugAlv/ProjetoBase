@@ -1,82 +1,53 @@
 <?php
-require_once __DIR__ . '/../Config/database.php';
+// app/Models/Notificacao.php — tabela `notificacao`
 
-class Notificacao
+class Notificacao extends Model
 {
-    private $conn;
+    protected $table = 'notificacao';
+    protected $primaryKey = 'id_notificacao';
 
-    public function __construct()
+    /** Cria uma notificação para um usuário. */
+    public function criar(int $idUsuario, string $titulo, string $mensagem = '', string $tipo = 'info', ?string $tabelaOrigem = null, ?int $registroId = null): int
     {
-        $this->conn = Database::getConnection();
+        return $this->insert([
+            'id_usuario' => $idUsuario,
+            'tipo' => $tipo,
+            'titulo' => $titulo,
+            'mensagem' => $mensagem,
+            'tabela_origem' => $tabelaOrigem,
+            'registro_id' => $registroId,
+        ]);
     }
 
-    /**
-     * Busca todas as notificações de um usuário
-     */
-    public function getByUsuario(int $idUsuario): array
+    public function getByUsuario(int $idUsuario, int $limite = 100): array
     {
-        $sql = "SELECT * FROM notificacao 
-                WHERE id_usuario = ? 
-                ORDER BY data_criacao DESC 
-                LIMIT 100";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idUsuario]);
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->where(['id_usuario' => $idUsuario], 'data_criacao DESC', $limite);
     }
 
-    /**
-     * Busca notificações não lidas de um usuário
-     */
     public function getNaoLidas(int $idUsuario): array
     {
-        $sql = "SELECT * FROM notificacao 
-                WHERE id_usuario = ? AND lida = FALSE 
-                ORDER BY data_criacao DESC";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idUsuario]);
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->where(['id_usuario' => $idUsuario, 'lida' => 0], 'data_criacao DESC');
     }
 
-    /**
-     * Conta notificações não lidas
-     */
     public function contarNaoLidas(int $idUsuario): int
     {
-        $sql = "SELECT COUNT(*) as total FROM notificacao 
-                WHERE id_usuario = ? AND lida = FALSE";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idUsuario]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        return (int) $resultado['total'];
+        return $this->count(['id_usuario' => $idUsuario, 'lida' => 0]);
     }
 
-    /**
-     * Marca uma notificação como lida
-     */
-    public function marcarComoLida(int $idNotificacao): bool
+    /** Só marca se a notificação pertencer ao usuário (evita mexer na de outra pessoa). */
+    public function marcarComoLida(int $idNotificacao, int $idUsuario): bool
     {
-        $sql = "UPDATE notificacao SET lida = TRUE, data_leitura = NOW() 
-                WHERE id_notificacao = ?";
-        
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$idNotificacao]);
+        return $this->execute(
+            "UPDATE notificacao SET lida = TRUE, data_leitura = NOW() WHERE id_notificacao = ? AND id_usuario = ?",
+            [$idNotificacao, $idUsuario]
+        ) > 0;
     }
 
-    /**
-     * Marca todas as notificações como lidas
-     */
-    public function marcarTodasComoLidas(int $idUsuario): bool
+    public function marcarTodasComoLidas(int $idUsuario): int
     {
-        $sql = "UPDATE notificacao SET lida = TRUE, data_leitura = NOW() 
-                WHERE id_usuario = ? AND lida = FALSE";
-        
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$idUsuario]);
+        return $this->execute(
+            "UPDATE notificacao SET lida = TRUE, data_leitura = NOW() WHERE id_usuario = ? AND lida = FALSE",
+            [$idUsuario]
+        );
     }
 }

@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (starCount) {
         // Você pode implementar uma chamada à API do GitHub aqui
         // para buscar o número real de estrelas
-        console.log('⭐ GitHub star counter ready');
+        console.log('GitHub star counter ready');
     }
 });
 </script>

@@ -25,8 +25,8 @@ $appName = App::getName();
                 <p>Usuários Ativos</p>
             </div>
             <div class="stat-box">
-                <strong><?= $primeiroAcessoPendentes ?? 0 ?></strong>
-                <p>Primeiro Acesso Pendente</p>
+                <strong><?= (int) (($totalUsuarios ?? 0) - ($totalAtivos ?? 0)) ?></strong>
+                <p>Usuários Inativos</p>
             </div>
             <div class="stat-box">
                 <strong><?= count($perfis ?? []) ?></strong>

@@ -52,9 +52,12 @@ return [
                     'url' => '/usuarios',
                     'roles' => [1, 2],
                 ],
-                // ============================================================
-                // REMOVIDO: Primeiro Acesso Pendente
-                // ============================================================
+                [
+                    'label' => 'Exemplo (CRUD)',
+                    'icon' => 'fas fa-table',
+                    'url' => '/exemplo',
+                    'roles' => [1, 2],
+                ],
             ],
         ],
 
@@ -90,24 +93,31 @@ return [
         ],
 
         // ========================================
-        // APENAS ADMIN
+        // MASTER E ADMIN
         // ========================================
         [
             'label' => 'Relatórios',
             'icon' => 'fas fa-file-alt',
-            'roles' => [2],
+            'roles' => [1, 2],
             'subitems' => [
                 [
                     'label' => 'Relatório de Usuários',
                     'icon' => 'fas fa-users',
                     'url' => '/relatorios/usuarios',
-                    'roles' => [2],
+                    'roles' => [1, 2],
                 ],
                 [
                     'label' => 'Exportar Excel',
                     'icon' => 'fas fa-file-excel',
                     'url' => '/relatorios/exportar',
-                    'roles' => [2],
+                    'roles' => [1, 2],
+                    'module' => 'export',
+                ],
+                [
+                    'label' => 'Exportar PDF',
+                    'icon' => 'fas fa-file-pdf',
+                    'url' => '/relatorios/pdf',
+                    'roles' => [1, 2],
                     'module' => 'export',
                 ],
             ],

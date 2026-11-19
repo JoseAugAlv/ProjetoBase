@@ -7,7 +7,7 @@ class PaginationHelper
      */
     public static function paginate($total, $paginaAtual = 1, $limite = 20)
     {
-        $totalPaginas = ceil($total / $limite);
+        $totalPaginas = max(1, (int) ceil($total / max(1, $limite)));
         $paginaAtual = max(1, min($paginaAtual, $totalPaginas));
         $offset = ($paginaAtual - 1) * $limite;
         
@@ -69,6 +69,6 @@ class PaginationHelper
     private static function buildUrl($baseUrl, $pagina, $params = [])
     {
         $params['pagina'] = $pagina;
-        return $baseUrl . '?' . http_build_query($params);
+        return htmlspecialchars($baseUrl . '?' . http_build_query($params), ENT_QUOTES, 'UTF-8');
     }
 }

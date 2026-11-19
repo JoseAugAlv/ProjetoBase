@@ -1,38 +1,28 @@
 <?php
-// app/Controllers/LogController.php
+// app/Controllers/LogController.php — auditoria (módulo 'logs')
 
-require_once __DIR__ . '/../Core/App.php';
-require_once __DIR__ . '/../Models/LogSistema.php';
-require_once __DIR__ . '/../Helpers/PaginationHelper.php';
-
-class LogController
+class LogController extends BaseController
 {
     public function index()
     {
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
-        }
-
         $logModel = new LogSistema();
-        $pagina = (int) ($_GET['pagina'] ?? 1);
         $limite = 20;
-        
-        $total = $logModel->getTotal();
-        $paginacao = PaginationHelper::paginate($total, $pagina, $limite);
-        $logs = $logModel->getWithPagination($limite, $paginacao['offset']);
-        $tabelas = $logModel->getTabelas();
-        $acoes = $logModel->getAcoes();
-        
-        $paginationHtml = PaginationHelper::render(
-            App::getBasePath() . '/logs', 
-            $pagina, 
-            $paginacao['totalPaginas']
-        );
-        
-        $tituloPagina = 'Logs do Sistema - ' . App::getName();
-        $cssPagina = 'logs.css';
-        
-        require_once __DIR__ . '/../Views/logs/index.php';
+
+        $filtros = [
+            'buscar' => mb_substr($this->input('buscar'), 0, 100),
+            'tabela' => $this->input('tabela'),
+            'acao' => $this->input('acao'),
+        ];
+
+        $total = $logModel->getTotalWithFilters($filtros);
+        $paginacao = PaginationHelper::paginate($total, max(1, $this->inputInt('pagina', 1)), $limite);
+
+        $this->view('logs/index', [
+            'logs' => $logModel->getWithFilters($limite, $paginacao['offset'], $filtros),
+            'total' => $total,
+            'tabelas' => $logModel->getTabelas(),
+            'acoes' => $logModel->getAcoes(),
+            'paginationHtml' => PaginationHelper::render(url('/logs'), $paginacao['paginaAtual'], $paginacao['totalPaginas'], array_filter($filtros)),
+        ]);
     }
 }

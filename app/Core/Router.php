@@ -1,138 +1,130 @@
 <?php
 // app/Core/Router.php
-
-require_once __DIR__ . '/App.php';
+// Registro e despacho de rotas.
+//   $router->get('/produtos', 'ProdutoController@index', [Perfil::MASTER, Perfil::ADMIN]);
+//   $router->post('/produtos/salvar', 'ProdutoController@salvar', [1, 2]);
+//   $router->crud('produtos', 'ProdutoController', [1, 2]);   // 6 rotas de CRUD
+// Roles vazio = rota pública. Todo POST é validado contra CSRF automaticamente.
 
 class Router
 {
-    private $routes = [
-        'GET' => [],
-        'POST' => []
-    ];
+    private $routes = ['GET' => [], 'POST' => []];
 
-    public function get($uri, $action, $roles = [])
+    public function get(string $uri, string $action, array $roles = []): void
     {
-        $this->routes['GET'][$uri] = [
-            'action' => $action,
-            'roles' => $roles
-        ];
+        $this->add('GET', $uri, $action, $roles);
     }
 
-    public function post($uri, $action, $roles = [])
+    public function post(string $uri, string $action, array $roles = []): void
     {
-        $this->routes['POST'][$uri] = [
-            'action' => $action,
-            'roles' => $roles
-        ];
+        $this->add('POST', $uri, $action, $roles);
     }
 
-    public function dispatch($requestUri)
+    /**
+     * Registra as rotas padrão de um CRUD (usado com controllers que estendem CrudController).
+     */
+    public function crud(string $prefixo, string $controller, array $roles = [1, 2]): void
     {
-        $path = parse_url($requestUri, PHP_URL_PATH);
+        $p = '/' . trim($prefixo, '/');
+        $this->get($p, "{$controller}@index", $roles);
+        $this->get("{$p}/criar", "{$controller}@criar", $roles);
+        $this->post("{$p}/salvar", "{$controller}@salvar", $roles);
+        $this->get("{$p}/editar", "{$controller}@editar", $roles);
+        $this->post("{$p}/atualizar", "{$controller}@atualizar", $roles);
+        $this->post("{$p}/excluir", "{$controller}@excluir", $roles);
+    }
 
-        // ==========================================
-        // CAMINHO BASE DINÂMICO
-        // ==========================================
+    private function add(string $method, string $uri, string $action, array $roles): void
+    {
+        $uri = '/' . trim($uri, '/');
+        $this->routes[$method][$uri] = ['action' => $action, 'roles' => array_map('intval', $roles)];
+    }
+
+    public function dispatch(string $requestUri): void
+    {
+        $path = rawurldecode((string) parse_url($requestUri, PHP_URL_PATH));
+
+        // Remove o caminho base (ex: /ProjetoBase) respeitando o limite de pasta
         $basePath = App::getBasePath();
-        
-        // Remove o caminho base da URL
-        if ($basePath && strpos($path, $basePath) === 0) {
+        if ($basePath !== '' && ($path === $basePath || strpos($path, $basePath . '/') === 0)) {
             $path = substr($path, strlen($basePath));
         }
+        $path = '/' . trim($path, '/');
 
-        // Se a URL estiver vazia, define como "/"
-        if ($path === '' || $path === '/') {
-            $path = '/';
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        if ($method === 'HEAD') {
+            $method = 'GET';
         }
 
-        $method = $_SERVER['REQUEST_METHOD'];
+        [$route, $params] = $this->match($method, $path);
 
-        // Buscar rota exata
-        $route = $this->routes[$method][$path] ?? null;
-
-        $params = [];
-
-        // Se não encontrou, tentar rota com parâmetros
         if (!$route) {
-            foreach ($this->routes[$method] as $routePath => $routeData) {
-                if (str_contains($routePath, '{')) {
-                    $pattern = preg_replace(
-                        '#\{[a-zA-Z0-9_]+\}#',
-                        '([a-zA-Z0-9\-]+)',
-                        $routePath
-                    );
-                    $pattern = "#^" . $pattern . "$#";
+            View::erro(404);
+        }
 
-                    if (preg_match($pattern, $path, $matches)) {
-                        array_shift($matches);
-                        $route = $routeData;
-                        $params = $matches;
-                        break;
-                    }
+        // CSRF em todo POST
+        if ($method === 'POST') {
+            CsrfMiddleware::validate();
+        }
+
+        // Permissões
+        if (!empty($route['roles'])) {
+            if (!Auth::check()) {
+                if (!self::isAjax()) {
+                    $_SESSION['url_pretendida'] = $path;
+                    flash('aviso', 'Faça login para continuar.');
                 }
+                redirect('/login');
+            }
+            if (!Auth::hasRole($route['roles'])) {
+                View::erro(403);
             }
         }
 
-        // Rota não encontrada
-        if (!$route) {
-            http_response_code(404);
-            echo "<h1>404 - Rota não encontrada</h1>";
-            echo "<p>URL: " . htmlspecialchars($path) . "</p>";
-            echo "<p>Base Path: " . htmlspecialchars($basePath) . "</p>";
-            return;
+        [$controller, $metodo] = explode('@', $route['action']) + [null, null];
+
+        if (!$controller || !$metodo || !class_exists($controller)) {
+            throw new RuntimeException("Controller não encontrado para a rota {$path}: {$route['action']}");
         }
 
-        $action = $route['action'];
-        $roles = $route['roles'];
+        $instancia = new $controller();
+        if (!is_callable([$instancia, $metodo])) {
+            throw new RuntimeException("Método {$controller}::{$metodo} não existe ou não é público.");
+        }
 
-        // Verificar permissões
-        if (!empty($roles)) {
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
+        $instancia->$metodo(...$params);
+    }
+
+    private function match(string $method, string $path): array
+    {
+        if (isset($this->routes[$method][$path])) {
+            return [$this->routes[$method][$path], []];
+        }
+
+        // Rotas com parâmetros: /produtos/{id}
+        foreach ($this->routes[$method] ?? [] as $routePath => $routeData) {
+            if (strpos($routePath, '{') === false) {
+                continue;
             }
-
-            $usuario = $_SESSION['usuario'] ?? null;
-
-            if (!$usuario) {
-                header('Location: ' . App::getBasePath() . '/login');
-                exit;
-            }
-
-            $roleUsuario = (int) ($usuario['role'] ?? 0);
-            $rolesPermitidos = array_map('intval', $roles);
-
-            if (!in_array($roleUsuario, $rolesPermitidos, true)) {
-                http_response_code(403);
-                echo "<h1>403 - Acesso Negado</h1>";
-                exit;
+            $pattern = '#^' . preg_replace('#\{[a-zA-Z0-9_]+\}#', '([a-zA-Z0-9\-_]+)', $routePath) . '$#';
+            if (preg_match($pattern, $path, $matches)) {
+                array_shift($matches);
+                return [$routeData, $matches];
             }
         }
 
-        // Valida action Controller@method
-        if (!str_contains($action, '@')) {
-            http_response_code(500);
-            echo "<h1>Rota inválida</h1>";
-            return;
-        }
+        return [null, []];
+    }
 
-        [$controller, $methodName] = explode('@', $action);
-        $controllerPath = dirname(__DIR__) . "/Controllers/{$controller}.php";
+    /** Lista de rotas registradas (usado por `php bin/console rotas`). */
+    public function getRoutes(): array
+    {
+        return $this->routes;
+    }
 
-        if (!file_exists($controllerPath)) {
-            http_response_code(500);
-            echo "<h1>Controller não encontrado: {$controller}</h1>";
-            return;
-        }
-
-        require_once $controllerPath;
-        $controllerInstance = new $controller();
-
-        if (!method_exists($controllerInstance, $methodName)) {
-            http_response_code(500);
-            echo "<h1>Método não encontrado: {$methodName}</h1>";
-            return;
-        }
-
-        $controllerInstance->$methodName(...$params);
+    public static function isAjax(): bool
+    {
+        return ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest'
+            || strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false;
     }
 }

@@ -1,367 +1,191 @@
 <?php
-// app/Models/Usuario.php
+// app/Models/Usuario.php — tabela `usuario`
 
-require_once __DIR__ . '/../Config/database.php';
-
-class Usuario
+class Usuario extends Model
 {
-    private $conn;
+    protected $table = 'usuario';
+    protected $primaryKey = 'id_usuario';
 
-    public function __construct()
-    {
-        $this->conn = Database::getConnection();
-    }
-
-    /**
-     * Busca usuário por email
-     */
-    public function findByEmail(string $email): ?array
-    {
-        $sql = "SELECT * FROM usuario WHERE email = ? LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$email]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $resultado ?: null;
-    }
+    /** Colunas que podem ser gravadas por create()/update() */
+    private const COLUNAS = [
+        'nome', 'email', 'senha', 'telefone', 'data_nascimento', 'id_perfil',
+        'ativo', 'email_verificado', 'token_verificacao', 'data_verificacao', 'google_id',
+    ];
 
     /**
-     * Busca usuário por ID
+     * Valida os dados pessoais. Retorna a mensagem de erro ou null se estiver tudo certo.
+     * Usado no cadastro, na edição do próprio perfil e na gestão de usuários.
      */
-    public function findById(int $id): ?array
+    public static function validarDados(string $nome, string $email, string $telefone = '', string $dataNascimento = ''): ?string
     {
-        $sql = "SELECT u.*, p.perfil as nome_perfil 
-                FROM usuario u
-                LEFT JOIN perfil p ON u.id_perfil = p.id_perfil
-                WHERE u.id_usuario = ? LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$id]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $resultado ?: null;
-    }
-
-    /**
-     * Busca usuário por token de verificação
-     */
-    public function findByToken(string $token): ?array
-    {
-        $sql = "SELECT * FROM usuario WHERE token_verificacao = ? AND email_verificado = FALSE";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$token]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $resultado ?: null;
-    }
-
-    /**
-     * Busca o perfil do usuário
-     */
-    public function getPerfil(int $idUsuario): int
-    {
-        $sql = "SELECT id_perfil FROM usuario WHERE id_usuario = ? LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idUsuario]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $resultado ? (int) $resultado['id_perfil'] : 4;
-    }
-
-    /**
-     * Cria um novo usuário
-     */
-    public function create(array $dados): int
-    {
-        // ============================================================
-        // REMOVIDO: primeiro_acesso = TRUE
-        // Agora o campo primeiro_acesso sempre será FALSE
-        // ============================================================
-        $sql = "INSERT INTO usuario (
-                    nome, 
-                    email, 
-                    senha, 
-                    telefone, 
-                    data_nascimento, 
-                    id_perfil, 
-                    token_verificacao, 
-                    email_verificado,
-                    primeiro_acesso
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, ?)";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
-            $dados['nome'],
-            $dados['email'],
-            $dados['senha'],
-            $dados['telefone'] ?? null,
-            $dados['data_nascimento'] ?? null,
-            $dados['id_perfil'] ?? 4,
-            $dados['token'],
-            $dados['primeiro_acesso'] ?? false // <-- Agora FALSE por padrão
-        ]);
-        return (int) $this->conn->lastInsertId();
-    }
-
-    /**
-     * Atualiza dados do usuário
-     */
-    public function update(int $id, array $dados): bool
-    {
-        $sql = "UPDATE usuario SET ";
-        $params = [];
-        $updates = [];
-
-        if (isset($dados['nome'])) {
-            $updates[] = "nome = ?";
-            $params[] = $dados['nome'];
+        if ($nome === '' || $email === '') {
+            return 'Nome e e-mail são obrigatórios.';
         }
-        if (isset($dados['email'])) {
-            $updates[] = "email = ?";
-            $params[] = $dados['email'];
+        if (mb_strlen($nome) > 150) {
+            return 'Nome muito longo (máx. 150 caracteres).';
         }
-        if (isset($dados['senha'])) {
-            $updates[] = "senha = ?";
-            $params[] = $dados['senha'];
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 100) {
+            return 'E-mail inválido.';
         }
-        if (isset($dados['telefone'])) {
-            $updates[] = "telefone = ?";
-            $params[] = $dados['telefone'];
+        if ($telefone !== '' && !preg_match('/^[0-9()+\-\s]{8,20}$/', $telefone)) {
+            return 'Telefone inválido.';
         }
-        if (isset($dados['data_nascimento'])) {
-            $updates[] = "data_nascimento = ?";
-            $params[] = $dados['data_nascimento'];
-        }
-        if (isset($dados['id_perfil'])) {
-            $updates[] = "id_perfil = ?";
-            $params[] = $dados['id_perfil'];
-        }
-        if (isset($dados['token_verificacao'])) {
-            $updates[] = "token_verificacao = ?";
-            $params[] = $dados['token_verificacao'];
-        }
-        if (isset($dados['email_verificado'])) {
-            $updates[] = "email_verificado = ?";
-            $params[] = $dados['email_verificado'];
-        }
-        // ============================================================
-        // REMOVIDO: primeiro_acesso não é mais atualizado
-        // ============================================================
-        if (isset($dados['ativo'])) {
-            $updates[] = "ativo = ?";
-            $params[] = $dados['ativo'];
-        }
-
-        if (empty($updates)) {
-            return false;
-        }
-
-        $sql .= implode(', ', $updates) . " WHERE id_usuario = ?";
-        $params[] = $id;
-
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute($params);
-    }
-
-    /**
-     * Atualiza a senha do usuário
-     */
-    public function updatePassword(int $id, string $senhaHash): bool
-    {
-        $sql = "UPDATE usuario SET senha = ? WHERE id_usuario = ?";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$senhaHash, $id]);
-    }
-
-    /**
-     * Verifica o email do usuário
-     */
-    public function verificarEmail(int $idUsuario): bool
-    {
-        $sql = "UPDATE usuario 
-                SET email_verificado = TRUE, 
-                    token_verificacao = NULL, 
-                    data_verificacao = NOW() 
-                WHERE id_usuario = ?";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$idUsuario]);
-    }
-
-    /**
-     * Verifica se o email já está em uso (exceto o próprio usuário)
-     */
-    public function emailExists(string $email, ?int $excluirId = null): bool
-    {
-        $sql = "SELECT id_usuario FROM usuario WHERE email = ?";
-        $params = [$email];
-        
-        if ($excluirId !== null) {
-            $sql .= " AND id_usuario != ?";
-            $params[] = $excluirId;
-        }
-        
-        $sql .= " LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-        return (bool) $stmt->fetch();
-    }
-
-    /**
-     * Gera e salva token de verificação
-     */
-    public function gerarTokenVerificacao(int $idUsuario): string
-    {
-        $token = bin2hex(random_bytes(32));
-        $sql = "UPDATE usuario SET token_verificacao = ? WHERE id_usuario = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$token, $idUsuario]);
-        return $token;
-    }
-
-    /**
-     * Verifica se o token de redefinição é válido
-     */
-    public function validarTokenReset(string $token): ?array
-    {
-        $sql = "SELECT * FROM reset_senha 
-                WHERE usado = FALSE AND expiracao > NOW()";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $tokens = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        foreach ($tokens as $row) {
-            if (hash_equals($row['token'], $token)) {
-                return ['id_usuario' => $row['id_usuario']];
+        if ($dataNascimento !== '') {
+            $data = DateTime::createFromFormat('!Y-m-d', $dataNascimento);
+            if (!$data || $data->format('Y-m-d') !== $dataNascimento || $data > new DateTime('today')) {
+                return 'Data de nascimento inválida.';
             }
         }
-        
         return null;
     }
 
-    /**
-     * Salva token de redefinição de senha
-     */
-    public function salvarTokenReset(int $idUsuario, string $token): bool
+    public function findByEmail(string $email): ?array
     {
-        $expiracao = date('Y-m-d H:i:s', strtotime('+1 hour'));
-        $sql = "INSERT INTO reset_senha (id_usuario, token, expiracao) VALUES (?, ?, ?)";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$idUsuario, $token, $expiracao]);
+        return $this->findBy('email', trim($email));
+    }
+
+    /** Usuário + nome do perfil */
+    public function findById(int $id): ?array
+    {
+        return $this->queryOne(
+            "SELECT u.*, p.perfil AS nome_perfil
+             FROM usuario u LEFT JOIN perfil p ON p.id_perfil = u.id_perfil
+             WHERE u.id_usuario = ? LIMIT 1",
+            [$id]
+        );
+    }
+
+    /** Busca pelo token de verificação de e-mail (o banco guarda só o hash). */
+    public function findByTokenVerificacao(string $token): ?array
+    {
+        if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
+            return null;
+        }
+        return $this->queryOne(
+            "SELECT * FROM usuario WHERE token_verificacao = ? AND email_verificado = FALSE LIMIT 1",
+            [hash('sha256', $token)]
+        );
     }
 
     /**
-     * Marca token de redefinição como usado
+     * Cria usuário. $dados['senha'] deve vir JÁ com hash (PasswordHelper::hash).
      */
-    public function marcarTokenResetUsado(string $token): bool
+    public function create(array $dados): int
     {
-        $sql = "UPDATE reset_senha SET usado = TRUE WHERE token = ?";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$token]);
+        $dados = $this->filtrar($dados) + [
+            'id_perfil' => Perfil::USUARIO,
+            'email_verificado' => 0,
+            'ativo' => 1,
+        ];
+        return $this->insert($dados);
     }
 
-    /**
-     * Busca todos os usuários
-     */
+    public function update($id, array $dados): bool
+    {
+        return parent::update($id, $this->filtrar($dados));
+    }
+
+    public function updatePassword(int $id, string $senhaHash): bool
+    {
+        return $this->update($id, ['senha' => $senhaHash]);
+    }
+
+    public function verificarEmail(int $id): bool
+    {
+        return $this->execute(
+            "UPDATE usuario SET email_verificado = TRUE, token_verificacao = NULL, data_verificacao = NOW() WHERE id_usuario = ?",
+            [$id]
+        ) > 0;
+    }
+
+    public function emailExists(string $email, ?int $excluirId = null): bool
+    {
+        $sql = "SELECT 1 FROM usuario WHERE email = ?";
+        $params = [trim($email)];
+        if ($excluirId !== null) {
+            $sql .= " AND id_usuario <> ?";
+            $params[] = $excluirId;
+        }
+        return $this->queryOne($sql . ' LIMIT 1', $params) !== null;
+    }
+
+    /** Gera token de verificação: grava o hash e devolve o token puro (vai no e-mail). */
+    public function gerarTokenVerificacao(int $id): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->update($id, ['token_verificacao' => hash('sha256', $token)]);
+        return $token;
+    }
+
+    /** Lista com nome do perfil. */
+    public function listar(bool $somenteAtivos = false): array
+    {
+        $where = $somenteAtivos ? 'WHERE u.ativo = TRUE' : '';
+        return $this->query(
+            "SELECT u.*, p.perfil AS nome_perfil
+             FROM usuario u LEFT JOIN perfil p ON p.id_perfil = u.id_perfil
+             {$where} ORDER BY u.nome ASC"
+        );
+    }
+
+    /** Mantido por compatibilidade: só ativos. */
     public function getAll(): array
     {
-        $sql = "SELECT u.*, p.perfil as nome_perfil 
-                FROM usuario u
-                LEFT JOIN perfil p ON u.id_perfil = p.id_perfil
-                WHERE u.ativo = TRUE
-                ORDER BY u.nome ASC";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->listar(true);
     }
 
-    /**
-     * Busca usuários com paginação
-     */
     public function getWithPagination(int $limite, int $offset): array
     {
-        $sql = "SELECT u.*, p.perfil as nome_perfil 
-                FROM usuario u
-                LEFT JOIN perfil p ON u.id_perfil = p.id_perfil
-                ORDER BY u.nome ASC
-                LIMIT ? OFFSET ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$limite, $offset]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->query(
+            "SELECT u.*, p.perfil AS nome_perfil
+             FROM usuario u LEFT JOIN perfil p ON p.id_perfil = u.id_perfil
+             ORDER BY u.nome ASC LIMIT ? OFFSET ?",
+            [$limite, $offset]
+        );
     }
 
-    /**
-     * Total de usuários
-     */
     public function getTotal(): int
     {
-        $sql = "SELECT COUNT(*) as total FROM usuario";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int) ($resultado['total'] ?? 0);
+        return $this->count();
     }
 
-    /**
-     * Total de usuários ativos
-     */
     public function getTotalAtivos(): int
     {
-        $sql = "SELECT COUNT(*) as total FROM usuario WHERE ativo = TRUE";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int) ($resultado['total'] ?? 0);
+        return $this->count(['ativo' => 1]);
     }
 
-    /**
-     * Usuários agrupados por perfil
-     */
     public function getCountByPerfil(): array
     {
-        $sql = "SELECT p.perfil, COUNT(*) as total 
-                FROM usuario u
-                INNER JOIN perfil p ON u.id_perfil = p.id_perfil
-                GROUP BY p.perfil
-                ORDER BY p.id_perfil";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->query(
+            "SELECT p.id_perfil, p.perfil, COUNT(u.id_usuario) AS total
+             FROM perfil p LEFT JOIN usuario u ON u.id_perfil = p.id_perfil
+             GROUP BY p.id_perfil, p.perfil ORDER BY p.id_perfil"
+        );
     }
 
-    /**
-     * Atualiza o perfil do usuário
-     */
     public function atualizarPerfil(int $idUsuario, int $idPerfil): bool
     {
-        $sql = "UPDATE usuario SET id_perfil = ? WHERE id_usuario = ?";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$idPerfil, $idUsuario]);
+        return $this->update($idUsuario, ['id_perfil' => $idPerfil]);
     }
 
-    /**
-     * Busca perfis disponíveis
-     */
     public function getPerfis(): array
     {
-        $sql = "SELECT * FROM perfil ORDER BY id_perfil";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return (new Perfil())->all('id_perfil');
     }
 
-    /**
-     * Busca perfil por ID
-     */
-    public function getPerfilById(int $idPerfil): ?array
+    private function filtrar(array $dados): array
     {
-        $sql = "SELECT * FROM perfil WHERE id_perfil = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$idPerfil]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $resultado ?: null;
+        $dados = array_intersect_key($dados, array_flip(self::COLUNAS));
+        foreach (['telefone', 'data_nascimento'] as $opcional) {
+            if (array_key_exists($opcional, $dados) && $dados[$opcional] === '') {
+                $dados[$opcional] = null;
+            }
+        }
+        foreach (['ativo', 'email_verificado'] as $bool) {
+            if (array_key_exists($bool, $dados)) {
+                $dados[$bool] = $dados[$bool] ? 1 : 0;
+            }
+        }
+        return $dados;
     }
-
-    // ============================================================
-    // REMOVIDO: Métodos relacionados a primeiro acesso
-    // - getPrimeiroAcessoPendentes()
-    // - contarPrimeiroAcessoPendentes()
-    // - concluirPrimeiroAcesso()
-    // - resetarSenhaPrimeiroAcesso()
-    // ============================================================
 }

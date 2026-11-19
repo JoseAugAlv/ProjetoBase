@@ -1,151 +1,89 @@
 <?php
-// app/Models/LogSistema.php
+// app/Models/LogSistema.php — tabela `log_sistema` (auditoria)
+// Gravação normalmente via SecurityHelper::logAuditoria() ou $this->log() no controller.
 
-require_once __DIR__ . '/../Config/database.php';
-
-class LogSistema
+class LogSistema extends Model
 {
-    private $conn;
+    protected $table = 'log_sistema';
+    protected $primaryKey = 'id_log';
 
-    public function __construct()
+    public function registrar(string $acao, ?string $tabela = null, ?int $registroId = null, string $detalhes = '', ?int $idUsuario = null, ?string $ip = null): int
     {
-        $this->conn = Database::getConnection();
+        return $this->insert([
+            'acao' => mb_substr($acao, 0, 100),
+            'tabela_afetada' => $tabela,
+            'registro_id' => $registroId,
+            'detalhes' => $detalhes,
+            'id_usuario' => $idUsuario,
+            'ip' => $ip,
+        ]);
     }
 
     /**
-     * Busca logs com paginação
+     * Logs com filtros opcionais: ['buscar' => '', 'tabela' => '', 'acao' => '']
      */
-    public function getWithPagination($limite, $offset): array
+    public function getWithFilters(int $limite, int $offset, array $filtros = []): array
     {
-        $sql = "SELECT 
-                    l.*,
-                    u.nome as usuario_nome
-                FROM log_sistema l
-                LEFT JOIN usuario u ON l.id_usuario = u.id_usuario
-                ORDER BY l.data_criacao DESC
-                LIMIT ? OFFSET ?";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$limite, $offset]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Total de logs
-     */
-    public function getTotal(): int
-    {
-        $sql = "SELECT COUNT(*) as total FROM log_sistema";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int) ($resultado['total'] ?? 0);
-    }
-
-    /**
-     * Lista de tabelas afetadas
-     */
-    public function getTabelas(): array
-    {
-        $sql = "SELECT DISTINCT tabela_afetada FROM log_sistema WHERE tabela_afetada IS NOT NULL ORDER BY tabela_afetada";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $resultados = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        return array_filter($resultados);
-    }
-
-    /**
-     * Lista de ações
-     */
-    public function getAcoes(): array
-    {
-        $sql = "SELECT DISTINCT acao FROM log_sistema ORDER BY acao";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $resultados = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        return array_filter($resultados);
-    }
-
-    /**
-     * Busca logs com filtros
-     */
-    public function getWithFilters($limite, $offset, $filtros = []): array
-    {
-        $sql = "SELECT 
-                    l.*,
-                    u.nome as usuario_nome
-                FROM log_sistema l
-                LEFT JOIN usuario u ON l.id_usuario = u.id_usuario
-                WHERE 1=1";
-        $params = [];
-
-        if (!empty($filtros['buscar'])) {
-            $sql .= " AND (l.acao LIKE ? OR l.tabela_afetada LIKE ? OR l.detalhes LIKE ?)";
-            $search = '%' . $filtros['buscar'] . '%';
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
-        }
-
-        if (!empty($filtros['tabela'])) {
-            $sql .= " AND l.tabela_afetada = ?";
-            $params[] = $filtros['tabela'];
-        }
-
-        if (!empty($filtros['acao'])) {
-            $sql .= " AND l.acao = ?";
-            $params[] = $filtros['acao'];
-        }
-
-        $sql .= " ORDER BY l.data_criacao DESC LIMIT ? OFFSET ?";
+        [$where, $params] = $this->filtrosSql($filtros, 'l.');
         $params[] = $limite;
         $params[] = $offset;
 
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->query(
+            "SELECT l.*, u.nome AS usuario_nome
+             FROM log_sistema l LEFT JOIN usuario u ON u.id_usuario = l.id_usuario
+             {$where} ORDER BY l.data_criacao DESC, l.id_log DESC LIMIT ? OFFSET ?",
+            $params
+        );
     }
 
-    /**
-     * Total de logs com filtros
-     */
-    public function getTotalWithFilters($filtros = []): int
+    public function getTotalWithFilters(array $filtros = []): int
     {
-        $sql = "SELECT COUNT(*) as total FROM log_sistema WHERE 1=1";
+        [$where, $params] = $this->filtrosSql($filtros, '');
+        $row = $this->queryOne("SELECT COUNT(*) AS total FROM log_sistema {$where}", $params);
+        return (int) ($row['total'] ?? 0);
+    }
+
+    public function getWithPagination(int $limite, int $offset): array
+    {
+        return $this->getWithFilters($limite, $offset);
+    }
+
+    public function getTotal(): int
+    {
+        return $this->count();
+    }
+
+    public function getTabelas(): array
+    {
+        return array_column($this->query(
+            "SELECT DISTINCT tabela_afetada FROM log_sistema WHERE tabela_afetada IS NOT NULL AND tabela_afetada <> '' ORDER BY tabela_afetada"
+        ), 'tabela_afetada');
+    }
+
+    public function getAcoes(): array
+    {
+        return array_column($this->query("SELECT DISTINCT acao FROM log_sistema ORDER BY acao"), 'acao');
+    }
+
+    private function filtrosSql(array $filtros, string $prefixo): array
+    {
+        $partes = [];
         $params = [];
 
         if (!empty($filtros['buscar'])) {
-            $sql .= " AND (acao LIKE ? OR tabela_afetada LIKE ? OR detalhes LIKE ?)";
-            $search = '%' . $filtros['buscar'] . '%';
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
+            $partes[] = "({$prefixo}acao LIKE ? OR {$prefixo}tabela_afetada LIKE ? OR {$prefixo}detalhes LIKE ?)";
+            $termo = '%' . $filtros['buscar'] . '%';
+            array_push($params, $termo, $termo, $termo);
         }
-
         if (!empty($filtros['tabela'])) {
-            $sql .= " AND tabela_afetada = ?";
+            $partes[] = "{$prefixo}tabela_afetada = ?";
             $params[] = $filtros['tabela'];
         }
-
         if (!empty($filtros['acao'])) {
-            $sql .= " AND acao = ?";
+            $partes[] = "{$prefixo}acao = ?";
             $params[] = $filtros['acao'];
         }
 
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int) ($resultado['total'] ?? 0);
-    }
-
-    /**
-     * Insere um novo log
-     */
-    public function insert($acao, $tabelaAfetada, $registroId, $detalhes, $idUsuario = null): bool
-    {
-        $sql = "INSERT INTO log_sistema (acao, tabela_afetada, registro_id, detalhes, id_usuario) 
-                VALUES (?, ?, ?, ?, ?)";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([$acao, $tabelaAfetada, $registroId, $detalhes, $idUsuario]);
+        return [$partes ? 'WHERE ' . implode(' AND ', $partes) : '', $params];
     }
 }

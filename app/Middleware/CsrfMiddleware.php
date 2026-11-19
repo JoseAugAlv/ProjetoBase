@@ -1,48 +1,48 @@
 <?php
 // app/Middleware/CsrfMiddleware.php
+// Proteção CSRF. O Router valida TODO POST automaticamente:
+// basta chamar csrf_field() dentro de cada <form method="POST">.
+// Para fetch()/AJAX envie o header X-CSRF-TOKEN com csrf_token().
 
 class CsrfMiddleware
 {
-    /**
-     * Gera token CSRF único por sessão
-     */
-    public static function generateToken()
+    public static function generateToken(): string
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
         if (empty($_SESSION['csrf_token'])) {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
-
         return $_SESSION['csrf_token'];
     }
 
-    /**
-     * Retorna o campo HTML pronto para colar em formulários
-     */
-    public static function field()
+    public static function field(): string
     {
-        $token = self::generateToken();
-        return '<input type="hidden" name="_csrf_token" value="' . htmlspecialchars($token) . '">';
+        return '<input type="hidden" name="_csrf_token" value="' . htmlspecialchars(self::generateToken(), ENT_QUOTES, 'UTF-8') . '">';
+    }
+
+    /** Confere um token (útil para links GET sensíveis, como o logout). */
+    public static function check(?string $token): bool
+    {
+        $sessao = $_SESSION['csrf_token'] ?? null;
+        return $sessao && $token && hash_equals((string) $sessao, (string) $token);
     }
 
     /**
-     * Valida token CSRF da requisição
+     * Valida o token da requisição atual. Se inválido: AJAX recebe 419 em JSON;
+     * formulário volta para a página anterior com aviso de sessão expirada.
      */
-    public static function validate()
+    public static function validate(): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        $token = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+
+        if (self::check($token)) {
+            return;
         }
 
-        $tokenSessao = $_SESSION['csrf_token'] ?? null;
-        $tokenRequisicao = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
-
-        if (!$tokenSessao || !$tokenRequisicao || !hash_equals((string)$tokenSessao, (string)$tokenRequisicao)) {
-            http_response_code(403);
-            die(json_encode(['erro' => 'Token CSRF inválido']));
+        if (Router::isAjax()) {
+            View::erro(419);
         }
+
+        flash('erro', 'Sua sessão expirou ou o formulário é inválido. Tente novamente.');
+        back('/');
     }
 }

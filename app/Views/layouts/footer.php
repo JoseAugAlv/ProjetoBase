@@ -1,4 +1,4 @@
-<footer>
+<footer data-no-invert>
     <div class="footer-container">
         <div class="footer-grid">
             <!-- Logo e Sobre -->
@@ -63,6 +63,8 @@
     </div>
 </footer>
 
-<script src="<?= App::getBasePath() ?>/public/js/main.js"></script>
+<?php require __DIR__ . '/acessibilidade.php'; ?>
+
+<script src="<?= asset('js/main.js') ?>"></script>
 </body>
 </html>

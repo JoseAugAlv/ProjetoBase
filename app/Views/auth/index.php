@@ -2,20 +2,14 @@
 // app/Views/auth/index.php
 
 $tituloPagina = 'Login - ' . App::getName();
-$cssPagina = 'login.css';
+$cssPagina = 'auth.css';
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
-require_once __DIR__ . '/../../Helpers/ViewHelper.php';
 
 $basePath = App::getBasePath();
 $appName = App::getName();
 
-if (isset($_SESSION['flash'])): ?>
-    <div class="flash-<?= $_SESSION['flash']['tipo'] ?>">
-        <?= htmlspecialchars($_SESSION['flash']['mensagem']) ?>
-    </div>
-    <?php unset($_SESSION['flash']); ?>
-<?php endif; ?>
+?>
 
 <section class="auth-section animate-in">
     <div class="auth-container">
@@ -50,14 +44,17 @@ if (isset($_SESSION['flash'])): ?>
                 
                 <button type="submit" class="btn btn-primary btn-full">Entrar</button>
             </form>
-            
+
+            <?php require __DIR__ . '/_google.php'; ?>
+
             <div class="auth-footer">
                 <p>Não tem uma conta? <a href="<?= $basePath ?>/login/cadastrar">Criar Conta</a></p>
             </div>
             
-            <?php if ($_SERVER['REMOTE_ADDR'] == '127.0.0.1' || $_SERVER['REMOTE_ADDR'] == '::1'): ?>
+            <?php // Só em desenvolvimento (APP_ENV=development) e acessando da própria máquina ?>
+            <?php if (App::isDebug() && in_array(client_ip(), ['127.0.0.1', '::1'], true)): ?>
             <div class="auth-dev" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
-                <h4 style="font-size: 0.9rem; color: #6c757d;">🔧 Login Rápido (DEV)</h4>
+                <h4 style="font-size: 0.9rem; color: #6c757d;"><i class="fas fa-wrench" aria-hidden="true"></i> Login Rápido (DEV)</h4>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button type="button" class="btn btn-sm" onclick="loginRapido('master@projetobase.com')" style="background: #f59e0b; color: #fff;">Master</button>
                     <button type="button" class="btn btn-sm" onclick="loginRapido('admin@projetobase.com')" style="background: #3b82f6; color: #fff;">Admin</button>
@@ -73,7 +70,7 @@ if (isset($_SESSION['flash'])): ?>
 <script>
 function loginRapido(email) {
     document.getElementById('email').value = email;
-    document.getElementById('senha').value = '123';
+    document.getElementById('senha').value = 'Teste@123'; // senha dos dados de teste (database/dados_teste.sql)
 }
 </script>
 

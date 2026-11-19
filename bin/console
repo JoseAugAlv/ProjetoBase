@@ -1,0 +1,405 @@
+<?php
+// bin/console — comandos de terminal do ProjetoBase.
+// Uso: php bin/console <comando> [argumentos]
+// (no XAMPP/Windows: C:\xampp\php\php.exe bin\console <comando>)
+
+if (PHP_SAPI !== 'cli') {
+    exit("Somente via terminal.\n");
+}
+
+require __DIR__ . '/../app/bootstrap.php';
+
+$comando = $argv[1] ?? 'ajuda';
+$args = array_slice($argv, 2);
+
+$comandos = [
+    'instalar' => 'Cria o banco (DB_NAME do .env) e as tabelas. Use --teste para incluir dados de teste',
+    'migrar' => 'Aplica as alterações de database/migracoes/ em um banco já existente',
+    'criar-master' => 'Cria um usuário Master (pergunta nome, e-mail e senha)',
+    'criar:pagina' => 'Cria controller + view + css de uma página. Ex: criar:pagina Contato',
+    'criar:model' => 'Cria o model de uma tabela. Ex: criar:model produto',
+    'criar:crud' => 'Cria model + controller CRUD lendo as colunas da tabela. Ex: criar:crud produto',
+    'rotas' => 'Lista todas as rotas registradas',
+];
+
+try {
+    switch ($comando) {
+        case 'instalar':
+            instalar(in_array('--teste', $args, true));
+            break;
+        case 'migrar':
+            migrar();
+            break;
+        case 'criar-master':
+            criarMaster();
+            break;
+        case 'criar:pagina':
+            criarPagina($args[0] ?? perguntar('Nome da página (ex: Contato)'));
+            break;
+        case 'criar:model':
+            criarModel($args[0] ?? perguntar('Nome da tabela'));
+            break;
+        case 'criar:crud':
+            criarCrud($args[0] ?? perguntar('Nome da tabela'));
+            break;
+        case 'rotas':
+            listarRotas();
+            break;
+        default:
+            echo "ProjetoBase - comandos disponíveis:\n\n";
+            foreach ($comandos as $nome => $desc) {
+                printf("  %-14s %s\n", $nome, $desc);
+            }
+            echo "\nExemplo: php bin/console criar:crud produto\n";
+    }
+} catch (Throwable $e) {
+    fwrite(STDERR, "\n[ERRO] " . $e->getMessage() . "\n");
+    exit(1);
+}
+
+// ============================================================
+// COMANDOS
+// ============================================================
+
+function instalar(bool $comTeste): void
+{
+    $host = App::get('DB_HOST', '127.0.0.1');
+    $port = App::get('DB_PORT', '3306');
+    $db = App::get('DB_NAME', 'projetobase');
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $db)) {
+        throw new RuntimeException("DB_NAME inválido: {$db}");
+    }
+
+    $dsn = strpos($host, ':') !== false ? "mysql:host={$host};charset=utf8mb4" : "mysql:host={$host};port={$port};charset=utf8mb4";
+    $pdo = new PDO($dsn, App::get('DB_USER', 'root'), App::get('DB_PASS', ''), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+
+    $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    $pdo->exec("USE `{$db}`");
+    echo "Banco `{$db}` pronto.\n";
+
+    executarSql($pdo, ROOT_PATH . '/database/schema.sql');
+    echo "Tabelas criadas (database/schema.sql).\n";
+
+    // O schema.sql já está na versão mais nova: marca as migrações como aplicadas
+    criarTabelaMigracao($pdo);
+    $novaInstalacao = (int) $pdo->query("SELECT COUNT(*) FROM migracao")->fetchColumn() === 0;
+    if ($novaInstalacao) {
+        $stmt = $pdo->prepare("INSERT IGNORE INTO migracao (nome) VALUES (?)");
+        foreach (arquivosMigracao() as $arquivo) {
+            $stmt->execute([basename($arquivo)]);
+        }
+    }
+
+    if ($comTeste) {
+        if (App::env() === 'production') {
+            throw new RuntimeException('Dados de teste bloqueados com APP_ENV=production.');
+        }
+        executarSql($pdo, ROOT_PATH . '/database/dados_teste.sql');
+        echo "Dados de teste importados. Logins: master@projetobase.com / admin@... / operador@... / usuario@...  Senha: Teste@123\n";
+    } else {
+        echo "Próximo passo: php bin/console criar-master\n";
+    }
+}
+
+/** Aplica os arquivos de database/migracoes/ que ainda não rodaram neste banco. */
+function migrar(): void
+{
+    $pdo = Database::getConnection();
+    criarTabelaMigracao($pdo);
+    $feitas = $pdo->query("SELECT nome FROM migracao")->fetchAll(PDO::FETCH_COLUMN);
+
+    $aplicadas = 0;
+    foreach (arquivosMigracao() as $arquivo) {
+        $nome = basename($arquivo);
+        if (in_array($nome, $feitas, true)) {
+            continue;
+        }
+        executarSql($pdo, $arquivo);
+        $pdo->prepare("INSERT INTO migracao (nome) VALUES (?)")->execute([$nome]);
+        echo "  [aplicada] {$nome}\n";
+        $aplicadas++;
+    }
+    echo $aplicadas ? "{$aplicadas} migração(ões) aplicada(s).\n" : "Banco já está atualizado.\n";
+}
+
+function criarTabelaMigracao(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS migracao (nome VARCHAR(150) PRIMARY KEY, executada_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+function arquivosMigracao(): array
+{
+    $arquivos = glob(ROOT_PATH . '/database/migracoes/*.sql') ?: [];
+    sort($arquivos);
+    return $arquivos;
+}
+
+function criarMaster(): void
+{
+    $usuario = new Usuario();
+
+    $nome = perguntar('Nome');
+    $email = mb_strtolower(perguntar('E-mail'));
+    $erro = Usuario::validarDados($nome, $email);
+    if ($erro) {
+        throw new RuntimeException($erro);
+    }
+    if ($usuario->emailExists($email)) {
+        throw new RuntimeException('Já existe um usuário com esse e-mail.');
+    }
+
+    $senha = perguntar('Senha (mín. 8, com maiúscula, minúscula, número e especial)');
+    $v = PasswordHelper::validate($senha);
+    if (!$v['valid']) {
+        throw new RuntimeException('Senha fraca: ' . implode(', ', $v['errors']));
+    }
+
+    $id = $usuario->create([
+        'nome' => $nome,
+        'email' => $email,
+        'senha' => PasswordHelper::hash($senha),
+        'id_perfil' => Perfil::MASTER,
+        'email_verificado' => 1,
+    ]);
+    echo "Master criado (ID {$id}). Faça login com {$email}.\n";
+}
+
+function criarPagina(string $nome): void
+{
+    $classe = studly($nome);
+    $slug = strtolower(preg_replace('/(?<!^)[A-Z]/', '-$0', $classe));
+    $pasta = strtolower($classe);
+
+    criarArquivo(APP_PATH . "/Controllers/{$classe}Controller.php", <<<PHP
+<?php
+// app/Controllers/{$classe}Controller.php
+
+class {$classe}Controller extends BaseController
+{
+    public function index()
+    {
+        // Busque dados nos models e passe para a view:
+        // \$itens = (new Produto())->all('nome');
+        \$this->view('{$pasta}/index', [
+            // 'itens' => \$itens,
+        ]);
+    }
+}
+
+PHP);
+
+    criarArquivo(APP_PATH . "/Views/{$pasta}/index.php", <<<PHP
+<?php
+// app/Views/{$pasta}/index.php
+
+\$tituloPagina = '{$classe} - ' . App::getName();
+\$cssPagina = '{$pasta}.css';
+require __DIR__ . '/../layouts/header.php';
+require __DIR__ . '/../layouts/nav.php';
+?>
+
+<section class="section-block animate-in">
+    <div class="container">
+        <h1>{$classe}</h1>
+        <p>Conteúdo da página. Lembre de escapar dados com <code>&lt;?= e(\$valor) ?&gt;</code>.</p>
+    </div>
+</section>
+
+<?php require __DIR__ . '/../layouts/footer.php'; ?>
+
+PHP);
+
+    criarArquivo(ROOT_PATH . "/public/css/{$pasta}.css", "/* Estilos da página {$classe} */\n");
+
+    echo "\nAdicione em routes/web.php:\n";
+    echo "  \$router->get('/{$slug}', '{$classe}Controller@index');            // pública\n";
+    echo "  // ou só para logados: \$router->get('/{$slug}', '{$classe}Controller@index', \$logados);\n";
+    echo "E, se quiser no menu, em app/Config/menu.php.\n";
+}
+
+function criarModel(string $tabela, bool $mostrarDica = true): string
+{
+    $tabela = identificador($tabela);
+    $classe = studly($tabela);
+    $pk = descobrirPk($tabela);
+
+    criarArquivo(APP_PATH . "/Models/{$classe}.php", <<<PHP
+<?php
+// app/Models/{$classe}.php — tabela `{$tabela}`
+
+class {$classe} extends Model
+{
+    protected \$table = '{$tabela}';
+    protected \$primaryKey = '{$pk}';
+
+    // Herdados: all, find, findBy, where, first, count, exists, insert, update, delete, paginate, query
+    // Coloque aqui as consultas específicas desta tabela.
+}
+
+PHP);
+
+    if ($mostrarDica) {
+        echo "Uso: \$m = new {$classe}(); \$m->all(); \$m->find(1); \$m->insert([...]);\n";
+    }
+    return $classe;
+}
+
+function criarCrud(string $tabela): void
+{
+    $tabela = identificador($tabela);
+    $colunas = colunasDaTabela($tabela);
+    if (!$colunas) {
+        throw new RuntimeException("Tabela `{$tabela}` não existe no banco. Crie a tabela primeiro.");
+    }
+
+    $classe = criarModel($tabela, false);
+    $pk = descobrirPk($tabela);
+
+    $fields = [];
+    $required = [];
+    $search = [];
+    $selects = [];
+    foreach ($colunas as $c) {
+        if ($c['Field'] === $pk || $c['Extra'] === 'auto_increment' || in_array($c['Field'], ['data_atualizacao', 'senha', 'token'], true)) {
+            continue;
+        }
+        $fields[] = $c['Field'];
+        if ($c['Null'] === 'NO' && $c['Default'] === null && $c['Field'] !== 'data_criacao') {
+            $required[] = $c['Field'];
+        }
+        if (preg_match('/char|text/i', $c['Type']) && count($search) < 3) {
+            $search[] = $c['Field'];
+        }
+        if (preg_match("/^enum\((.*)\)$/i", $c['Type'], $m)) {
+            $opcoes = str_getcsv($m[1], ',', "'");
+            $selects[$c['Field']] = array_combine($opcoes, array_map('ucfirst', $opcoes));
+        }
+    }
+
+    $exp = 'exportarArray';
+    $label = ucfirst(str_replace('_', ' ', $tabela));
+
+    criarArquivo(APP_PATH . "/Controllers/{$classe}Controller.php", <<<PHP
+<?php
+// app/Controllers/{$classe}Controller.php — CRUD da tabela `{$tabela}`
+
+class {$classe}Controller extends CrudController
+{
+    public function __construct()
+    {
+        \$this->table = '{$tabela}';
+        \$this->primaryKey = '{$pk}';
+        \$this->fields = {$exp($fields)};
+        \$this->requiredFields = {$exp($required)};
+        \$this->searchFields = {$exp($search)};
+        \$this->selectOptions = {$exp($selects)};
+        \$this->labelSingular = '{$label}';
+        \$this->labelPlural = '{$label}s';
+
+        parent::__construct();
+    }
+
+    // Regras extras de validação:
+    // protected function validateData(array \$dados, ?int \$id = null): void
+    // {
+    //     parent::validateData(\$dados, \$id);
+    //     if (...) { \$this->failValidation('Mensagem', \$id); }
+    // }
+}
+
+PHP);
+
+    echo "\nAdicione em routes/web.php:\n";
+    echo "  \$router->crud('{$tabela}', '{$classe}Controller', [\$M, \$A]);\n";
+    echo "Telas usam app/Views/crud/. Para personalizar, crie app/Views/{$tabela}/index.php (ou criar/editar).\n";
+}
+
+function listarRotas(): void
+{
+    $router = new Router();
+    require ROOT_PATH . '/routes/web.php';
+    foreach ($router->getRoutes() as $metodo => $rotas) {
+        foreach ($rotas as $uri => $r) {
+            $perfis = $r['roles'] ? implode(',', array_map(['Perfil', 'getNome'], $r['roles'])) : 'público';
+            printf("%-5s %-35s %-40s %s\n", $metodo, $uri, $r['action'], $perfis);
+        }
+    }
+}
+
+// ============================================================
+// AUXILIARES
+// ============================================================
+
+/** Array PHP em sintaxe curta numa linha: ['a', 'b'] ou ['k' => 'v'] */
+function exportarArray(array $v): string
+{
+    $lista = array_keys($v) === range(0, count($v) - 1);
+    $itens = [];
+    foreach ($v as $k => $item) {
+        $valor = is_array($item) ? exportarArray($item) : var_export($item, true);
+        $itens[] = $lista ? $valor : var_export($k, true) . ' => ' . $valor;
+    }
+    return '[' . implode(', ', $itens) . ']';
+}
+
+function perguntar(string $texto): string
+{
+    echo $texto . ': ';
+    return trim((string) fgets(STDIN));
+}
+
+function studly(string $nome): string
+{
+    $nome = identificador(preg_replace('/[^A-Za-z0-9_]/', '_', $nome));
+    return str_replace(' ', '', ucwords(str_replace('_', ' ', $nome)));
+}
+
+function identificador(string $nome): string
+{
+    if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $nome)) {
+        throw new RuntimeException("Nome inválido: '{$nome}' (use letras, números e _)");
+    }
+    return $nome;
+}
+
+function criarArquivo(string $caminho, string $conteudo): void
+{
+    if (file_exists($caminho)) {
+        echo "  [pulado] já existe: " . str_replace(ROOT_PATH . '/', '', str_replace('\\', '/', $caminho)) . "\n";
+        return;
+    }
+    if (!is_dir(dirname($caminho))) {
+        mkdir(dirname($caminho), 0755, true);
+    }
+    file_put_contents($caminho, $conteudo);
+    echo "  [criado] " . str_replace(ROOT_PATH . '/', '', str_replace('\\', '/', $caminho)) . "\n";
+}
+
+function colunasDaTabela(string $tabela): array
+{
+    try {
+        return Database::getConnection()->query("SHOW COLUMNS FROM `{$tabela}`")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+function descobrirPk(string $tabela): string
+{
+    foreach (colunasDaTabela($tabela) as $c) {
+        if ($c['Key'] === 'PRI') {
+            return $c['Field'];
+        }
+    }
+    return 'id_' . $tabela;
+}
+
+function executarSql(PDO $pdo, string $arquivo): void
+{
+    $sql = preg_replace('/^\s*--.*$/m', '', file_get_contents($arquivo));
+    foreach (preg_split('/;\s*(\r?\n|$)/', $sql) as $comando) {
+        if (trim($comando) !== '') {
+            $pdo->exec($comando);
+        }
+    }
+}

@@ -9,8 +9,9 @@ $appName = App::getName();
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 
-$status = $_GET['status'] ?? '';
-$mensagem = $_GET['mensagem'] ?? '';
+// $status e $mensagem vêm do AuthController::verificar()
+$status = $status ?? '';
+$mensagem = $mensagem ?? '';
 
 $isSuccess = $status === 'sucesso';
 $isError = $status === 'erro' || empty($status);

@@ -1,36 +1,47 @@
 <?php
 // app/Config/SessionConfig.php
-
-require_once __DIR__ . '/../Core/App.php';
+// Sessão segura: cookie HttpOnly/SameSite, Secure em HTTPS, modo estrito,
+// expiração por inatividade (SESSION_TIMEOUT no .env, em segundos) e troca periódica de ID.
 
 class SessionConfig
 {
-    public static function configure()
+    public static function configure(): void
     {
         if (session_status() !== PHP_SESSION_NONE) {
             return;
         }
 
-        $isProduction = isset($_ENV['APP_ENV']) && $_ENV['APP_ENV'] === 'production';
-        $isHttps = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        ini_set('session.use_strict_mode', '1');
+        ini_set('session.use_only_cookies', '1');
+        ini_set('session.use_trans_sid', '0');
 
         session_set_cookie_params([
-            'lifetime' => 3600,
+            'lifetime' => 0,                       // cookie de sessão (some ao fechar o navegador)
             'path' => App::getSessionPath(),
-            'domain' => $_SERVER['HTTP_HOST'] ?? 'localhost',
-            'secure' => $isProduction && $isHttps,
+            'domain' => '',                        // só o host atual
+            'secure' => App::isHttps(),
             'httponly' => true,
-            'samesite' => 'Lax'
+            'samesite' => 'Lax',
         ]);
 
         session_name(App::getSessionName());
         session_start();
 
-        if (!isset($_SESSION['last_regenerate'])) {
-            $_SESSION['last_regenerate'] = time();
-        } elseif (time() - $_SESSION['last_regenerate'] > 1800) {
+        // Expira por inatividade
+        $timeout = (int) App::get('SESSION_TIMEOUT', 7200);
+        $agora = time();
+        if (isset($_SESSION['_ultima_atividade']) && $agora - $_SESSION['_ultima_atividade'] > $timeout) {
+            $_SESSION = [];
             session_regenerate_id(true);
-            $_SESSION['last_regenerate'] = time();
+        }
+        $_SESSION['_ultima_atividade'] = $agora;
+
+        // Troca o ID da sessão a cada 30 min (reduz risco de sequestro de sessão)
+        if (!isset($_SESSION['_regenerado_em'])) {
+            $_SESSION['_regenerado_em'] = $agora;
+        } elseif ($agora - $_SESSION['_regenerado_em'] > 1800) {
+            session_regenerate_id(true);
+            $_SESSION['_regenerado_em'] = $agora;
         }
     }
 }

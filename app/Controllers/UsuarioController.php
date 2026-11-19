@@ -1,11 +1,10 @@
 <?php
 // app/Controllers/UsuarioController.php
+// Gestão de usuários (Master e Admin).
+// Regra de hierarquia em Perfil::podeGerenciar(): Master gerencia todos;
+// Admin só gerencia/atribui Operador e Usuario.
 
-require_once __DIR__ . '/../Core/App.php';
-require_once __DIR__ . '/../Models/Usuario.php';
-require_once __DIR__ . '/../Helpers/PaginationHelper.php';
-
-class UsuarioController
+class UsuarioController extends BaseController
 {
     private $usuario;
 
@@ -14,479 +13,195 @@ class UsuarioController
         $this->usuario = new Usuario();
     }
 
-    /**
-     * Lista de usuários (Admin e Master)
-     */
     public function index()
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $role = (int) $_SESSION['usuario']['role'];
-        
-        if (!in_array($role, [1, 2])) {
-            http_response_code(403);
-            echo "<h1>403 - Acesso Negado</h1>";
-            echo "<p>Apenas Administradores e Master podem acessar esta página.</p>";
-            echo "<a href='" . App::getBasePath() . "/'>Voltar</a>";
-            exit;
-        }
-
-        $pagina = (int) ($_GET['pagina'] ?? 1);
+        $pagina = max(1, $this->inputInt('pagina', 1));
         $limite = 20;
-        
+
         $total = $this->usuario->getTotal();
         $paginacao = PaginationHelper::paginate($total, $pagina, $limite);
-        $usuarios = $this->usuario->getWithPagination($limite, $paginacao['offset']);
-        $perfis = $this->usuario->getPerfis();
-        
-        $paginationHtml = PaginationHelper::render(
-            App::getBasePath() . '/usuarios', 
-            $pagina, 
-            $paginacao['totalPaginas']
-        );
 
-        $tituloPagina = 'Gerenciar Usuários - ' . App::getName();
-        $cssPagina = 'usuarios.css';
-        require '../app/Views/usuarios/index.php';
+        $this->view('usuarios/index', [
+            'usuarios' => $this->usuario->getWithPagination($limite, $paginacao['offset']),
+            'total' => $total,
+            'perfis' => $this->usuario->getPerfis(),
+            'role' => Auth::role(),
+            'paginationHtml' => PaginationHelper::render(url('/usuarios'), $paginacao['paginaAtual'], $paginacao['totalPaginas']),
+        ]);
     }
 
-    /**
-     * Formulário de criação (Admin e Master)
-     */
     public function criar()
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $role = (int) $_SESSION['usuario']['role'];
-        
-        if (!in_array($role, [1, 2])) {
-            http_response_code(403);
-            echo "<h1>403 - Acesso Negado</h1>";
-            exit;
-        }
-
-        $perfis = $this->usuario->getPerfis();
-        $tituloPagina = 'Criar Usuário - ' . App::getName();
-        $cssPagina = 'usuarios.css';
-        require '../app/Views/usuarios/criar.php';
+        $this->view('usuarios/criar', ['perfis' => $this->perfisPermitidos()]);
     }
 
-    /**
-     * Salvar novo usuário (Admin e Master)
-     */
     public function salvar()
     {
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
+        $nome = $this->input('nome');
+        $email = mb_strtolower($this->input('email'));
+        $telefone = $this->input('telefone');
+        $dataNascimento = $this->input('data_nascimento');
+        $idPerfil = $this->inputInt('id_perfil', Perfil::USUARIO);
+        $senha = (string) ($_POST['senha'] ?? '');
 
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
+        $erro = Usuario::validarDados($nome, $email, $telefone, $dataNascimento);
+        if (!$erro && !in_array($idPerfil, Perfil::atribuiveis(Auth::role()), true)) {
+            $erro = 'Você não pode criar usuários com esse perfil.';
+        }
+        if (!$erro && $this->usuario->emailExists($email)) {
+            $erro = 'Este e-mail já está cadastrado.';
+        }
+        if (!$erro && $senha !== '') {
+            $v = PasswordHelper::validate($senha);
+            $erro = $v['valid'] ? null : 'Senha fraca: ' . implode(', ', $v['errors']) . '.';
+        }
+        if ($erro) {
+            $this->redirectWith('/usuarios/criar', 'erro', $erro);
         }
 
-        $role = (int) $_SESSION['usuario']['role'];
-        
-        if (!in_array($role, [1, 2])) {
-            http_response_code(403);
-            echo "<h1>403 - Acesso Negado</h1>";
-            exit;
-        }
+        $id = $this->usuario->create([
+            'nome' => $nome,
+            'email' => $email,
+            // Sem senha informada: senha aleatória; o usuário define a dele pelo link do e-mail
+            'senha' => PasswordHelper::hash($senha !== '' ? $senha : PasswordHelper::generateTemp(24)),
+            'telefone' => $telefone,
+            'data_nascimento' => $dataNascimento,
+            'id_perfil' => $idPerfil,
+            'email_verificado' => 1,
+        ]);
 
-        $nome = trim($_POST['nome'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $telefone = trim($_POST['telefone'] ?? '');
-        $dataNascimento = $_POST['data_nascimento'] ?? '';
-        $idPerfil = (int) ($_POST['id_perfil'] ?? 4);
-        $senha = $_POST['senha'] ?? '';
+        // Nunca manda senha por e-mail: manda link para definir a senha (vale 48h)
+        $token = (new ResetSenha())->criar($id, 60 * 48);
+        $enviado = (new Mail())->sendBoasVindas($email, $nome, $token);
 
-        if (empty($nome) || empty($email)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Nome e e-mail são obrigatórios.'];
-            header('Location: ' . App::getBasePath() . '/usuarios/criar');
-            exit;
-        }
+        $this->log('criar_usuario', "Usuário criado: {$email} (perfil " . Perfil::getNome($idPerfil) . ')', 'usuario', $id);
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'E-mail inválido.'];
-            header('Location: ' . App::getBasePath() . '/usuarios/criar');
-            exit;
-        }
+        $this->redirectWith('/usuarios', $enviado ? 'sucesso' : 'aviso', $enviado
+            ? 'Usuário criado! Enviamos um e-mail para ele definir a senha.'
+            : 'Usuário criado, mas o e-mail não pôde ser enviado. Peça para ele usar "Esqueci minha senha".');
+    }
 
-        if ($this->usuario->emailExists($email)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Este e-mail já está cadastrado.'];
-            header('Location: ' . App::getBasePath() . '/usuarios/criar');
-            exit;
-        }
-
-        require_once __DIR__ . '/../Helpers/PasswordHelper.php';
-
-        if (empty($senha)) {
-            $senha = PasswordHelper::generateTemp();
-        } else {
-            $validacao = PasswordHelper::validate($senha);
-            if (!$validacao['valid']) {
-                $_SESSION['flash'] = [
-                    'tipo' => 'erro', 
-                    'mensagem' => 'Senha fraca. Requisitos: ' . implode(', ', $validacao['errors'])
-                ];
-                header('Location: ' . App::getBasePath() . '/usuarios/criar');
-                exit;
-            }
-        }
-
-        try {
-            require_once __DIR__ . '/../Helpers/PasswordHelper.php';
-            
-            $senhaTemp = $senha; // Se veio do formulário ou gerada
-            $senhaHash = PasswordHelper::hash($senhaTemp);
-            $token = bin2hex(random_bytes(32));
-
-            $idUsuario = $this->usuario->create([
-                'nome' => $nome,
-                'email' => $email,
-                'senha' => $senhaHash,
-                'telefone' => $telefone,
-                'data_nascimento' => $dataNascimento,
-                'id_perfil' => $idPerfil,
-                'token' => $token,
-                'email_verificado' => true,
-                'primeiro_acesso' => false
-            ]);
-
-            // Envia e-mail com a senha
-            require_once __DIR__ . '/../Core/Mail.php';
-            $mail = new Mail();
-            $assunto = "Sua conta foi criada - " . App::getName();
-            $mensagem = "
-            <h2>Olá, {$nome}!</h2>
-            <p>Sua conta foi criada no sistema " . App::getName() . ".</p>
-            <p><strong>E-mail:</strong> {$email}</p>
-            <p><strong>Senha temporária:</strong> {$senhaTemp}</p>
-            <p>Recomendamos alterar sua senha no primeiro acesso.</p>
-            <p><a href='" . App::getUrl() . "/login'>Acessar o sistema</a></p>
-            ";
-            $mail->send($email, $assunto, $mensagem, $nome);
-
-            require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-            SecurityHelper::logAuditoria(
-                'criar_usuario',
-                $_SESSION['usuario']['id'],
-                "Usuário criado: {$nome} ({$email}) com perfil ID: {$idPerfil}",
-                'info'
-            );
-
-            $_SESSION['flash'] = [
-                'tipo' => 'sucesso',
-                'mensagem' => "Usuário criado com sucesso! As credenciais foram enviadas para o e-mail."
-            ];
-
-        } catch (Exception $e) {
-                $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao criar usuário: ' . $e->getMessage()];
-                header('Location: ' . App::getBasePath() . '/usuarios/criar');
-                exit;
-            }
-        }
-
-    /**
-     * Formulário de edição (Admin e Master)
-     */
     public function editar()
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $role = (int) $_SESSION['usuario']['role'];
-        
-        if (!in_array($role, [1, 2])) {
-            http_response_code(403);
-            echo "<h1>403 - Acesso Negado</h1>";
-            exit;
-        }
-
-        $id = (int) ($_GET['id'] ?? 0);
-        
-        if (!$id) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Usuário não identificado.'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-        }
-
-        $usuario = $this->usuario->findById($id);
-        
-        if (!$usuario) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Usuário não encontrado.'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-        }
-
-        $perfis = $this->usuario->getPerfis();
-        $tituloPagina = 'Editar Usuário - ' . App::getName();
-        $cssPagina = 'usuarios.css';
-        require '../app/Views/usuarios/editar.php';
+        $alvo = $this->carregarAlvoGerenciavel($this->inputInt('id'));
+        $this->view('usuarios/editar', [
+            'usuario' => $alvo,
+            'perfis' => $this->perfisPermitidos(),
+            'editandoASiMesmo' => (int) $alvo['id_usuario'] === Auth::id(),
+        ]);
     }
 
-    /**
-     * Atualizar usuário (Admin e Master)
-     */
     public function atualizar()
     {
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
+        $id = $this->inputInt('id_usuario');
+        $alvo = $this->carregarAlvoGerenciavel($id);
+        $voltar = '/usuarios/editar?id=' . $id;
 
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $role = (int) $_SESSION['usuario']['role'];
-        
-        if (!in_array($role, [1, 2])) {
-            http_response_code(403);
-            echo "<h1>403 - Acesso Negado</h1>";
-            exit;
-        }
-
-        $id = (int) ($_POST['id_usuario'] ?? 0);
-        $nome = trim($_POST['nome'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $telefone = trim($_POST['telefone'] ?? '');
-        $dataNascimento = $_POST['data_nascimento'] ?? '';
-        $idPerfil = (int) ($_POST['id_perfil'] ?? 4);
+        $nome = $this->input('nome');
+        $email = mb_strtolower($this->input('email'));
+        $telefone = $this->input('telefone');
+        $dataNascimento = $this->input('data_nascimento');
+        $idPerfil = $this->inputInt('id_perfil', (int) $alvo['id_perfil']);
         $ativo = isset($_POST['ativo']) ? 1 : 0;
-        $senha = $_POST['senha'] ?? '';
+        $senha = (string) ($_POST['senha'] ?? '');
 
-        if (!$id) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Usuário não identificado.'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
+        // Ninguém muda o próprio perfil nem se desativa por aqui
+        if ($id === Auth::id()) {
+            $idPerfil = (int) $alvo['id_perfil'];
+            $ativo = 1;
         }
 
-        if (empty($nome) || empty($email)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Nome e e-mail são obrigatórios.'];
-            header('Location: ' . App::getBasePath() . '/usuarios/editar?id=' . $id);
-            exit;
+        $erro = Usuario::validarDados($nome, $email, $telefone, $dataNascimento);
+        if (!$erro && $idPerfil !== (int) $alvo['id_perfil'] && !in_array($idPerfil, Perfil::atribuiveis(Auth::role()), true)) {
+            $erro = 'Você não pode atribuir esse perfil.';
+        }
+        if (!$erro && $this->usuario->emailExists($email, $id)) {
+            $erro = 'Este e-mail já está em uso.';
         }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'E-mail inválido.'];
-            header('Location: ' . App::getBasePath() . '/usuarios/editar?id=' . $id);
-            exit;
-        }
+        $dados = [
+            'nome' => $nome,
+            'email' => $email,
+            'telefone' => $telefone,
+            'data_nascimento' => $dataNascimento,
+            'id_perfil' => $idPerfil,
+            'ativo' => $ativo,
+        ];
 
-        if ($this->usuario->emailExists($email, $id)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Este e-mail já está em uso.'];
-            header('Location: ' . App::getBasePath() . '/usuarios/editar?id=' . $id);
-            exit;
-        }
-
-        try {
-            $dados = [
-                'nome' => $nome,
-                'email' => $email,
-                'telefone' => $telefone,
-                'data_nascimento' => $dataNascimento,
-                'id_perfil' => $idPerfil,
-                'ativo' => $ativo
-            ];
-
-            if (!empty($senha)) {
-            require_once __DIR__ . '/../Helpers/PasswordHelper.php';
-            $validacao = PasswordHelper::validate($senha);
-            if (!$validacao['valid']) {
-                $_SESSION['flash'] = [
-                    'tipo' => 'erro', 
-                    'mensagem' => 'Senha fraca. Requisitos: ' . implode(', ', $validacao['errors'])
-                ];
-                header('Location: ' . App::getBasePath() . '/usuarios/editar?id=' . $id);
-                exit;
-            }
+        if (!$erro && $senha !== '') {
+            $v = PasswordHelper::validate($senha);
+            $erro = $v['valid'] ? null : 'Senha fraca: ' . implode(', ', $v['errors']) . '.';
             $dados['senha'] = PasswordHelper::hash($senha);
         }
-
-            $this->usuario->update($id, $dados);
-
-            require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-            SecurityHelper::logAuditoria(
-                'atualizar_usuario',
-                $_SESSION['usuario']['id'],
-                "Usuário atualizado: ID {$id} - {$nome}",
-                'info'
-            );
-
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Usuário atualizado com sucesso!'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao atualizar: ' . $e->getMessage()];
-            header('Location: ' . App::getBasePath() . '/usuarios/editar?id=' . $id);
-            exit;
+        if ($erro) {
+            $this->redirectWith($voltar, 'erro', $erro);
         }
+
+        $this->usuario->update($id, $dados);
+        $this->log('atualizar_usuario', "Usuário atualizado: {$email}", 'usuario', $id);
+
+        $this->redirectWith('/usuarios', 'sucesso', 'Usuário atualizado com sucesso!');
     }
 
-    /**
-     * Excluir usuário (Apenas Master)
-     */
+    /** POST — desativa (soft delete). */
     public function excluir()
     {
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
-
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
+        $id = $this->inputInt('id');
+        if ($id === Auth::id()) {
+            $this->redirectWith('/usuarios', 'erro', 'Você não pode desativar sua própria conta.');
         }
+        $alvo = $this->carregarAlvoGerenciavel($id);
 
-        $role = (int) $_SESSION['usuario']['role'];
-        
-        if ($role !== 1) {
-            http_response_code(403);
-            echo "<h1>403 - Acesso Negado</h1>";
-            echo "<p>Apenas o Master pode excluir usuários.</p>";
-            exit;
-        }
+        $this->usuario->update($id, ['ativo' => 0]);
+        $this->log('desativar_usuario', 'Usuário desativado: ' . $alvo['email'], 'usuario', $id, 'warning');
 
-        $id = (int) ($_GET['id'] ?? 0);
-
-        if (!$id) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Usuário não identificado.'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-        }
-
-        if ($id == $_SESSION['usuario']['id']) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Você não pode excluir sua própria conta.'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-        }
-
-        try {
-            $usuario = $this->usuario->findById($id);
-            $this->usuario->update($id, ['ativo' => 0]);
-
-            require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-            SecurityHelper::logAuditoria(
-                'excluir_usuario',
-                $_SESSION['usuario']['id'],
-                "Usuário desativado: ID {$id} - " . ($usuario['nome'] ?? ''),
-                'warning'
-            );
-
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Usuário desativado com sucesso!'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao desativar usuário: ' . $e->getMessage()];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-        }
+        $this->redirectWith('/usuarios', 'sucesso', 'Usuário desativado com sucesso!');
     }
 
-    /**
-     * Atribuir perfil - MASTER
-     */
-    public function atribuirPerfilMaster()
+    /** POST — troca só o perfil (usado pelo modal da área Master). */
+    public function atribuirPerfil()
     {
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
+        $id = $this->inputInt('id_usuario');
+        $idPerfil = $this->inputInt('id_perfil');
 
-        if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-            http_response_code(403);
-            echo "<h1>403 - Acesso Negado</h1>";
-            exit;
+        if ($id === Auth::id()) {
+            $this->flash('erro', 'Você não pode alterar o próprio perfil.');
+            $this->back('/usuarios');
+        }
+        $this->carregarAlvoGerenciavel($id);
+
+        if (!in_array($idPerfil, Perfil::atribuiveis(Auth::role()), true)) {
+            $this->flash('erro', 'Você não pode atribuir esse perfil.');
+            $this->back('/usuarios');
         }
 
-        $idUsuario = (int) ($_POST['id_usuario'] ?? 0);
-        $idPerfil = (int) ($_POST['id_perfil'] ?? 0);
+        $this->usuario->atualizarPerfil($id, $idPerfil);
+        $this->log('atribuir_perfil', "Usuário {$id} -> " . Perfil::getNome($idPerfil), 'usuario', $id);
 
-        if (!$idUsuario || !$idPerfil) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Dados inválidos.'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-        }
-
-        if ($this->usuario->atualizarPerfil($idUsuario, $idPerfil)) {
-            require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-            SecurityHelper::logAuditoria(
-                'atribuir_perfil_master',
-                $_SESSION['usuario']['id'],
-                "Perfil atribuído: Usuário ID {$idUsuario} -> Perfil ID {$idPerfil}",
-                'info'
-            );
-
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Perfil atribuído com sucesso!'];
-        } else {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao atribuir perfil.'];
-        }
-
-        header('Location: ' . App::getBasePath() . '/usuarios');
-        exit;
+        $this->flash('sucesso', 'Perfil atribuído com sucesso!');
+        $this->back('/usuarios');
     }
 
-    /**
-     * Atribuir perfil - ADMIN (apenas Operador e Usuario)
-     */
-    public function atribuirPerfilAdmin()
+    // ------------------------------------------------------------
+
+    /** Carrega o usuário alvo e garante que o logado tem hierarquia para mexer nele. */
+    private function carregarAlvoGerenciavel(int $id): array
     {
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
-
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
+        $alvo = $id ? $this->usuario->findById($id) : null;
+        if (!$alvo) {
+            $this->redirectWith('/usuarios', 'erro', 'Usuário não encontrado.');
         }
-
-        $role = (int) $_SESSION['usuario']['role'];
-        
-        if ($role !== 2) {
-            http_response_code(403);
-            echo "<h1>403 - Acesso Negado</h1>";
-            exit;
+        if ((int) $alvo['id_usuario'] !== Auth::id() && !Perfil::podeGerenciar(Auth::role(), (int) $alvo['id_perfil'])) {
+            $this->redirectWith('/usuarios', 'erro', 'Você não tem permissão para gerenciar este usuário.');
         }
-
-        $idUsuario = (int) ($_POST['id_usuario'] ?? 0);
-        $idPerfil = (int) ($_POST['id_perfil'] ?? 0);
-
-        if (!$idUsuario || !$idPerfil) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Dados inválidos.'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-        }
-
-        if (!in_array($idPerfil, [3, 4])) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Você só pode atribuir perfis Operador ou Usuario.'];
-            header('Location: ' . App::getBasePath() . '/usuarios');
-            exit;
-        }
-
-        if ($this->usuario->atualizarPerfil($idUsuario, $idPerfil)) {
-            require_once __DIR__ . '/../Helpers/SecurityHelper.php';
-            SecurityHelper::logAuditoria(
-                'atribuir_perfil_admin',
-                $_SESSION['usuario']['id'],
-                "Perfil atribuído por Admin: Usuário ID {$idUsuario} -> Perfil ID {$idPerfil}",
-                'info'
-            );
-
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Perfil atribuído com sucesso!'];
-        } else {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao atribuir perfil.'];
-        }
-
-        header('Location: ' . App::getBasePath() . '/usuarios');
-        exit;
+        return $alvo;
     }
 
-    // ============================================================
-    // REMOVIDO: Métodos relacionados a primeiro acesso pendente
-    // - pendentes()
-    // ============================================================
+    private function perfisPermitidos(): array
+    {
+        $permitidos = Perfil::atribuiveis(Auth::role());
+        return array_values(array_filter($this->usuario->getPerfis(), function ($p) use ($permitidos) {
+            return in_array((int) $p['id_perfil'], $permitidos, true);
+        }));
+    }
 }

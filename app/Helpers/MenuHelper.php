@@ -1,8 +1,7 @@
 <?php
 // app/Helpers/MenuHelper.php
-
-require_once __DIR__ . '/../Core/App.php';
-require_once __DIR__ . '/../Models/Notificacao.php';
+// Monta o menu (desktop e sidebar mobile) a partir de app/Config/menu.php,
+// filtrando por perfil do usuário e módulos ativos (app/Config/modules.php).
 
 class MenuHelper
 {
@@ -13,7 +12,7 @@ class MenuHelper
     private static function loadConfig()
     {
         if (self::$menuConfig === null) {
-            $menuFile = __DIR__ . '/../../app/Config/menu.php';
+            $menuFile = APP_PATH . '/Config/menu.php';
             if (file_exists($menuFile)) {
                 self::$menuConfig = require $menuFile;
             } else {
@@ -22,7 +21,7 @@ class MenuHelper
         }
 
         if (self::$modules === null) {
-            $modulesFile = __DIR__ . '/../../app/Config/modules.php';
+            $modulesFile = APP_PATH . '/Config/modules.php';
             if (file_exists($modulesFile)) {
                 self::$modules = require $modulesFile;
             } else {
@@ -30,9 +29,6 @@ class MenuHelper
             }
         }
 
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
         self::$usuario = $_SESSION['usuario'] ?? null;
     }
 
@@ -287,12 +283,7 @@ class MenuHelper
 
     public static function getRoleName()
     {
-        $roles = [
-            1 => 'Master',
-            2 => 'Admin',
-            3 => 'Operador',
-            4 => 'Usuario'
-        ];
-        return $roles[self::$usuario['role'] ?? 4] ?? 'Visitante';
+        self::loadConfig();
+        return self::$usuario ? Perfil::getNome((int) self::$usuario['role']) : 'Visitante';
     }
 }

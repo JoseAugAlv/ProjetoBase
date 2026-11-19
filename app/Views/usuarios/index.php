@@ -73,21 +73,28 @@ require_once __DIR__ . '/../layouts/nav.php';
                                 </td>
                                 <td>
                                     <span class="status-badge <?= $usuario['email_verificado'] ? 'verificado' : 'pendente' ?>">
-                                        <?= $usuario['email_verificado'] ? '✅' : '⏳' ?>
+                                        <?= $usuario['email_verificado'] ? '<i class="fas fa-check-circle" title="E-mail verificado"></i><span class="sr-only">Verificado</span>' : '<i class="fas fa-clock" title="Aguardando verificação"></i><span class="sr-only">Pendente</span>' ?>
                                     </span>
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <?php if (in_array($role, [1, 2])): ?>
-                                            <a href="<?= $basePath ?>/usuarios/editar?id=<?= $usuario['id_usuario'] ?>" class="btn btn-sm btn-edit">
+                                        <?php
+                                        $idLinha = (int) $usuario['id_usuario'];
+                                        $ehEuMesmo = $idLinha === Auth::id();
+                                        $podeGerenciar = $ehEuMesmo || Perfil::podeGerenciar((int) $role, (int) $usuario['id_perfil']);
+                                        ?>
+                                        <?php if ($podeGerenciar): ?>
+                                            <a href="<?= url('/usuarios/editar?id=' . $idLinha) ?>" class="btn btn-sm btn-edit" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                         <?php endif; ?>
-                                        
-                                        <?php if ($role == 1): ?>
-                                            <a href="<?= $basePath ?>/usuarios/excluir?id=<?= $usuario['id_usuario'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja desativar este usuário?')">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
+
+                                        <?php if ($podeGerenciar && !$ehEuMesmo && $usuario['ativo']): ?>
+                                            <form action="<?= url('/usuarios/excluir') ?>" method="POST" style="display:inline" onsubmit="return confirm('Tem certeza que deseja desativar este usuário?')">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="id" value="<?= $idLinha ?>">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Desativar"><i class="fas fa-user-slash"></i></button>
+                                            </form>
                                         <?php endif; ?>
                                     </div>
                                 </td>

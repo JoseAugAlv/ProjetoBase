@@ -7,26 +7,7 @@ $basePath = App::getBasePath();
 
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
-
-if (!isset($_SESSION['usuario']) || !in_array($_SESSION['usuario']['role'], [1, 2])) {
-    header('Location: ' . $basePath . '/');
-    exit;
-}
-
-if (isset($_SESSION['flash'])) {
-    $flash = $_SESSION['flash'];
-    echo '<div class="flash-' . $flash['tipo'] . '">' . htmlspecialchars($flash['mensagem']) . '</div>';
-    unset($_SESSION['flash']);
-}
-
-if (!isset($usuario) || empty($usuario)) {
-    echo '<div class="flash-erro">Usuário não encontrado.</div>';
-    echo '<a href="' . $basePath . '/usuarios" class="btn">Voltar</a>';
-    require_once __DIR__ . '/../layouts/footer.php';
-    exit;
-}
-
-$perfis = $this->usuario->getPerfis() ?? [];
+// Variáveis do UsuarioController::editar(): $usuario, $perfis (só os que o logado pode atribuir), $editandoASiMesmo
 ?>
 
 <section class="usuarios-section animate-in">
@@ -76,34 +57,40 @@ $perfis = $this->usuario->getPerfis() ?? [];
                     <!-- Data de Nascimento -->
                     <div class="form-group">
                         <label for="data_nascimento">Data de Nascimento</label>
-                        <input type="date" id="data_nascimento" name="data_nascimento" class="form-control" value="<?= $usuario['data_nascimento'] ?? '' ?>">
-                    </div>
-                    
-                    <!-- Perfil -->
-                    <div class="form-group">
-                        <label for="id_perfil">Perfil <span class="required">*</span></label>
-                        <select id="id_perfil" name="id_perfil" class="form-control" required>
-                            <?php foreach ($perfis as $perfil): ?>
-                                <option value="<?= $perfil['id_perfil'] ?>" <?= (isset($usuario['id_perfil']) && $usuario['id_perfil'] == $perfil['id_perfil']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($perfil['perfil']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <input type="date" id="data_nascimento" name="data_nascimento" class="form-control" value="<?= e($usuario['data_nascimento'] ?? '') ?>">
                     </div>
 
-                    <!-- Status -->
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="ativo" value="1" <?= isset($usuario['ativo']) && $usuario['ativo'] ? 'checked' : '' ?>>
-                            Usuário ativo
-                        </label>
-                    </div>
+                    <?php if ($editandoASiMesmo): ?>
+                        <div class="form-group form-group-full">
+                            <span class="form-help"><i class="fas fa-info-circle"></i> Você está editando a própria conta: perfil e status não podem ser alterados aqui.</span>
+                        </div>
+                    <?php else: ?>
+                        <!-- Perfil -->
+                        <div class="form-group">
+                            <label for="id_perfil">Perfil <span class="required">*</span></label>
+                            <select id="id_perfil" name="id_perfil" class="form-control" required>
+                                <?php foreach ($perfis as $perfil): ?>
+                                    <option value="<?= (int) $perfil['id_perfil'] ?>" <?= (int) $usuario['id_perfil'] === (int) $perfil['id_perfil'] ? 'selected' : '' ?>>
+                                        <?= e($perfil['perfil']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="ativo" value="1" <?= !empty($usuario['ativo']) ? 'checked' : '' ?>>
+                                Usuário ativo
+                            </label>
+                        </div>
+                    <?php endif; ?>
 
                     <!-- Senha -->
                     <div class="form-group form-group-full">
                         <label for="senha">Nova Senha</label>
-                        <input type="password" id="senha" name="senha" class="form-control" placeholder="Deixe em branco para manter a atual" minlength="6">
-                        <span class="form-help">Mínimo 6 caracteres.</span>
+                        <input type="password" id="senha" name="senha" class="form-control" placeholder="Deixe em branco para manter a atual" minlength="8" autocomplete="new-password">
+                        <span class="form-help">Mínimo 8 caracteres, com maiúscula, minúscula, número e caractere especial.</span>
                     </div>
                 </div>
 

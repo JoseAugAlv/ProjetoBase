@@ -12,7 +12,7 @@ class ExcelHelper
         }
 
         header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
-        header('Content-Disposition: attachment; filename="' . $nomeArquivo . '"');
+        header('Content-Disposition: attachment; filename="' . preg_replace('/[^A-Za-z0-9_.\-]/', '_', $nomeArquivo) . '"');
         header('Cache-Control: max-age=0');
 
         echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" 
@@ -123,13 +123,12 @@ class ExcelHelper
             return (string) $value;
         }
         
-        // Se for data, mantém no formato original
-        if (strtotime($value) !== false) {
-            return $value;
+        // Evita injeção de fórmula ao abrir no Excel (texto começando com = + - @)
+        if (preg_match('/^[=+\-@\t\r]/', (string) $value)) {
+            return "'" . $value;
         }
-        
-        // Retorna o valor original
-        return $value;
+
+        return (string) $value;
     }
 
     /**

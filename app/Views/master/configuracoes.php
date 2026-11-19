@@ -9,10 +9,6 @@ $appName = App::getName();
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 
-if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-    header('Location: ' . $basePath . '/');
-    exit;
-}
 ?>
 
 <section class="master-section animate-in">

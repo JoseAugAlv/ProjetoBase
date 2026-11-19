@@ -1,40 +1,26 @@
 <?php
-// app/Views/layouts/nav.php
+// app/Views/layouts/nav.php — menu superior, sidebar mobile e mensagens flash.
+// Itens do menu: app/Config/menu.php
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-require_once __DIR__ . '/../../Helpers/NavHelper.php';
-require_once __DIR__ . '/../../Helpers/MenuHelper.php';
-
-$usuario = $_SESSION['usuario'] ?? null;
-$appName = App::getName();
+$usuarioLogado = Auth::user();
 $basePath = App::getBasePath();
-
-if ($usuario) {
-    $perfil = $usuario['role'] ?? 4;
-    $_SESSION['usuario']['role'] = $perfil;
-    $totalNotificacoes = NavHelper::getContadorNotificacoes($usuario['id']);
-} else {
-    $perfil = null;
-    $totalNotificacoes = 0;
-}
+$appName = App::getName();
+$urlLogout = url('/logout?_token=' . urlencode(csrf_token()));
 ?>
 
-<nav>
+<nav data-no-invert>
     <div class="nav-container">
-        <a href="<?= $basePath ?>/" class="logo-brand"><?= strtoupper($appName) ?>.</a>
+        <a href="<?= url('/') ?>" class="logo-brand"><?= e(mb_strtoupper($appName)) ?>.</a>
 
         <ul class="nav-menu">
             <?= MenuHelper::render() ?>
         </ul>
 
         <div class="nav-actions">
-            <?php if ($usuario): ?>
-                <a href="<?= $basePath ?>/logout" class="btn-logout">Sair</a>
+            <?php if ($usuarioLogado): ?>
+                <a href="<?= e($urlLogout) ?>" class="btn-logout">Sair</a>
             <?php else: ?>
-                <a href="<?= $basePath ?>/login" class="btn-login">Entrar</a>
+                <a href="<?= url('/login') ?>" class="btn-login">Entrar</a>
             <?php endif; ?>
         </div>
 
@@ -45,31 +31,31 @@ if ($usuario) {
 </nav>
 
 <!-- SIDEBAR MOBILE -->
-<div class="sidebar" id="sidebar">
+<div class="sidebar" id="sidebar" data-no-invert>
     <button class="close-sidebar" id="closeBtn" aria-label="Fechar menu" type="button">
         <i class="fas fa-times" aria-hidden="true"></i>
     </button>
 
     <div class="sidebar-brand">
-        <a href="<?= $basePath ?>/" class="logo-brand" style="color: white; font-size: 1.5rem;"><?= strtoupper($appName) ?>.</a>
+        <a href="<?= url('/') ?>" class="logo-brand" style="color: white; font-size: 1.5rem;"><?= e(mb_strtoupper($appName)) ?>.</a>
     </div>
 
     <div class="sidebar-divider"></div>
 
     <?= MenuHelper::renderSidebar() ?>
 
-    <?php if ($usuario): ?>
-        <div class="sidebar-divider"></div>
-        <a href="<?= $basePath ?>/logout" style="color: #ef4444;">
+    <div class="sidebar-divider"></div>
+    <?php if ($usuarioLogado): ?>
+        <a href="<?= e($urlLogout) ?>" style="color: #ef4444;">
             <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair
         </a>
     <?php else: ?>
-        <div class="sidebar-divider"></div>
-        <a href="<?= $basePath ?>/login" class="btn btn-primary" style="text-align: center; color: white !important; justify-content: center;">
+        <a href="<?= url('/login') ?>" class="btn btn-primary" style="text-align: center; color: white !important; justify-content: center;">
             <i class="fas fa-sign-in-alt" aria-hidden="true"></i> Entrar
         </a>
     <?php endif; ?>
 </div>
 
-<!-- Carrega apenas o arquivo nav.js -->
-<script src="<?= $basePath ?>/public/js/nav.js"></script>
+<script src="<?= asset('js/nav.js') ?>"></script>
+
+<?php require __DIR__ . '/flash.php'; ?>

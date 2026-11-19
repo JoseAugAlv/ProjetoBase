@@ -8,16 +8,7 @@ $basePath = App::getBasePath();
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 
-if (!isset($_SESSION['usuario'])) {
-    header('Location: ' . $basePath . '/login');
-    exit;
-}
 
-if (isset($_SESSION['flash'])) {
-    $flash = $_SESSION['flash'];
-    echo '<div class="flash-' . $flash['tipo'] . '">' . htmlspecialchars($flash['mensagem']) . '</div>';
-    unset($_SESSION['flash']);
-}
 ?>
 
 <section class="profile-section animate-in">
@@ -62,19 +53,24 @@ if (isset($_SESSION['flash'])) {
                     <!-- Alterar Senha -->
                     <div class="profile-section-divider">
                         <h3><i class="fas fa-lock"></i> Alterar Senha</h3>
-                        <p class="form-help">Deixe em branco para manter a senha atual</p>
+                        <p class="form-help">Deixe em branco para manter a senha atual. Para trocar a senha ou o e-mail, informe a senha atual.</p>
                     </div>
 
                     <div class="profile-grid">
+                        <div class="profile-item form-group full-width">
+                            <label for="senha_atual">Senha atual</label>
+                            <input type="password" id="senha_atual" name="senha_atual" class="form-control" autocomplete="current-password" placeholder="Obrigatória para trocar e-mail ou senha">
+                        </div>
+
                         <div class="profile-item form-group">
                             <label for="senha">Nova Senha</label>
-                            <input type="password" id="senha" name="senha" class="form-control" placeholder="Mínimo 6 caracteres" minlength="6" onkeyup="atualizarRequisitosSenha()">
+                            <input type="password" id="senha" name="senha" class="form-control" placeholder="Mínimo 8 caracteres" minlength="8" autocomplete="new-password" onkeyup="atualizarRequisitosSenha()">
                             <div id="requisitos_senha" class="requisitos-senha"></div>
                         </div>
-                        
+
                         <div class="profile-item form-group">
                             <label for="senha_confirm">Confirmar Nova Senha</label>
-                            <input type="password" id="senha_confirm" name="senha_confirm" class="form-control" placeholder="Repita a senha" minlength="6">
+                            <input type="password" id="senha_confirm" name="senha_confirm" class="form-control" placeholder="Repita a senha" minlength="8" autocomplete="new-password">
                         </div>
                     </div>
 
@@ -102,8 +98,8 @@ function validarSenha() {
         Swal.fire({ icon: 'error', title: 'Erro!', text: 'As senhas não coincidem!', confirmButtonColor: '#dc3545' });
         return false;
     }
-    if (senha.length < 6) {
-        Swal.fire({ icon: 'error', title: 'Senha fraca!', text: 'A senha deve ter no mínimo 6 caracteres.', confirmButtonColor: '#dc3545' });
+    if (senha.length < 8) {
+        Swal.fire({ icon: 'error', title: 'Senha fraca!', text: 'A senha deve ter no mínimo 8 caracteres.', confirmButtonColor: '#dc3545' });
         return false;
     }
     return true;
@@ -115,14 +111,14 @@ function atualizarRequisitosSenha() {
     if (senha === '') { requisitos.innerHTML = ''; return; }
     var html = '<ul class="requisitos-list">';
     var checks = [
-        { test: senha.length >= 6, text: 'Mínimo 6 caracteres' },
+        { test: senha.length >= 8, text: 'Mínimo 8 caracteres' },
         { test: /[A-Z]/.test(senha), text: 'Letra maiúscula' },
         { test: /[a-z]/.test(senha), text: 'Letra minúscula' },
         { test: /[0-9]/.test(senha), text: 'Número' },
         { test: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(senha), text: 'Caractere especial' }
     ];
     checks.forEach(function(item) {
-        html += '<li class="' + (item.test ? 'ok' : 'erro') + '">' + (item.test ? '✅' : '❌') + ' ' + item.text + '</li>';
+        html += '<li class="' + (item.test ? 'ok' : 'erro') + '">' + (item.test ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-times" aria-hidden="true"></i>') + ' ' + item.text + '</li>';
     });
     html += '</ul>';
     requisitos.innerHTML = html;

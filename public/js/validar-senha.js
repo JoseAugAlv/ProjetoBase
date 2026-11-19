@@ -9,8 +9,8 @@ function validarSenhaCompleta(senha) {
         return { valida: true, erros: [] };
     }
     
-    if (senha.length < 6) {
-        erros.push('Mínimo 6 caracteres');
+    if (senha.length < 8) {
+        erros.push('Mínimo 8 caracteres');
     }
     if (!/[A-Z]/.test(senha)) {
         erros.push('Pelo menos 1 letra maiuscula');
@@ -78,8 +78,8 @@ function atualizarRequisitosSenha() {
     var html = '<ul style="list-style:none; padding:0; font-size:13px; margin:5px 0;">';
     
     // Tamanho minimo
-    var ok = senha.length >= 6;
-    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '[OK]' : '[X]') + ' Minimo 6 caracteres</li>';
+    var ok = senha.length >= 8;
+    html += '<li style="color:' + (ok ? 'green' : 'red') + ';">' + (ok ? '[OK]' : '[X]') + ' Minimo 8 caracteres</li>';
     
     // Letra maiuscula
     ok = /[A-Z]/.test(senha);

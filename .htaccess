@@ -1,4 +1,21 @@
-RewriteEngine On
+# Tudo vai para public/ (o resto do projeto nunca é servido diretamente)
+Options -Indexes
+# Não redirecionar /logs -> /logs/ só porque existe uma pasta com esse nome
+DirectorySlash Off
 
-RewriteCond %{REQUEST_URI} !^/public/
-RewriteRule ^(.*)$ public/$1 [L]
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Proteção extra caso o mod_rewrite esteja desligado
+<FilesMatch "^\.|\.(sql|log|md|lock|ini|sh)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

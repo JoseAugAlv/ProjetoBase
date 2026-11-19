@@ -1,12 +1,8 @@
 <?php
 // app/Controllers/UserController.php
+// "Minha Conta": o usuário logado vê e edita os próprios dados.
 
-require_once __DIR__ . '/../Core/App.php';
-require_once __DIR__ . '/../Models/Usuario.php';
-require_once __DIR__ . '/../Helpers/PaginationHelper.php';
-require_once __DIR__ . '/../Helpers/MenuHelper.php'; // NOVO
-
-class UserController
+class UserController extends BaseController
 {
     private $usuario;
 
@@ -17,127 +13,75 @@ class UserController
 
     public function index()
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $id = $_SESSION['usuario']['id'];
-        $usuario = $this->usuario->findById($id);
-
+        $usuario = $this->usuario->findById(Auth::id());
         if (!$usuario) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Usuário não encontrado.'];
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
+            $this->redirectWith('/', 'erro', 'Usuário não encontrado.');
         }
-
-        // Formata dados
-        $usuario['data_nascimento_formatada'] = !empty($usuario['data_nascimento']) 
-            ? date('d/m/Y', strtotime($usuario['data_nascimento'])) 
-            : 'Não informada';
-        
-        $usuario['telefone_formatado'] = $usuario['telefone'] ?? 'Não informado';
-        $usuario['nome_perfil'] = $usuario['nome_perfil'] ?? 'Usuario';
-
-        $tituloPagina = 'Minha Conta - ' . App::getName();
-        $cssPagina = 'user.css';
-
-        require_once __DIR__ . '/../Views/user/index.php';
+        $this->view('user/index', ['usuario' => $usuario]);
     }
 
     public function editar()
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $id = $_SESSION['usuario']['id'];
-        $usuario = $this->usuario->findById($id);
-
+        $usuario = $this->usuario->findById(Auth::id());
         if (!$usuario) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Usuário não encontrado.'];
-            header('Location: ' . App::getBasePath() . '/');
-            exit;
+            $this->redirectWith('/', 'erro', 'Usuário não encontrado.');
         }
-
-        $tituloPagina = 'Editar Conta - ' . App::getName();
-        $cssPagina = 'user.css';
-
-        require_once __DIR__ . '/../Views/user/editar.php';
+        $this->view('user/editar', ['usuario' => $usuario]);
     }
 
     public function atualizar()
     {
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
-        CsrfMiddleware::validate();
+        $id = Auth::id();
+        $atual = $this->usuario->find($id);
 
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
+        $nome = $this->input('nome');
+        $email = mb_strtolower($this->input('email'));
+        $telefone = $this->input('telefone');
+        $dataNascimento = $this->input('data_nascimento');
+        $senha = (string) ($_POST['senha'] ?? '');
+        $senhaConfirm = (string) ($_POST['senha_confirm'] ?? '');
+        $senhaAtual = (string) ($_POST['senha_atual'] ?? '');
+
+        $erro = Usuario::validarDados($nome, $email, $telefone, $dataNascimento);
+        if ($erro) {
+            $this->redirectWith('/user/editar', 'erro', $erro);
         }
-
-        $id = $_SESSION['usuario']['id'];
-        $nome = trim($_POST['nome'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $telefone = trim($_POST['telefone'] ?? '');
-        $dataNascimento = $_POST['data_nascimento'] ?? '';
-        $senha = $_POST['senha'] ?? '';
-
-        if (empty($nome) || empty($email)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Nome e e-mail são obrigatórios.'];
-            header('Location: ' . App::getBasePath() . '/user/editar');
-            exit;
-        }
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'E-mail inválido.'];
-            header('Location: ' . App::getBasePath() . '/user/editar');
-            exit;
-        }
-
         if ($this->usuario->emailExists($email, $id)) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Este e-mail já está em uso.'];
-            header('Location: ' . App::getBasePath() . '/user/editar');
-            exit;
+            $this->redirectWith('/user/editar', 'erro', 'Este e-mail já está em uso.');
         }
 
-        try {
-            $dados = [
-                'nome' => $nome,
-                'email' => $email,
-                'telefone' => $telefone,
-                'data_nascimento' => $dataNascimento,
-            ];
+        $dados = [
+            'nome' => $nome,
+            'email' => $email,
+            'telefone' => $telefone,
+            'data_nascimento' => $dataNascimento,
+        ];
 
-            if (!empty($senha)) {
-            require_once __DIR__ . '/../Helpers/PasswordHelper.php';
-            $validacao = PasswordHelper::validate($senha);
-            if (!$validacao['valid']) {
-                $_SESSION['flash'] = [
-                    'tipo' => 'erro', 
-                    'mensagem' => 'Senha fraca. Requisitos: ' . implode(', ', $validacao['errors'])
-                ];
-                header('Location: ' . App::getBasePath() . '/user/editar');
-                exit;
+        $trocaEmail = $email !== mb_strtolower($atual['email']);
+        $trocaSenha = $senha !== '';
+
+        // Trocar e-mail ou senha exige a senha atual (protege conta deixada aberta)
+        if (($trocaEmail || $trocaSenha) && !password_verify($senhaAtual, $atual['senha'])) {
+            $this->redirectWith('/user/editar', 'erro', 'Informe sua senha atual corretamente para alterar e-mail ou senha.');
+        }
+
+        if ($trocaSenha) {
+            if ($senha !== $senhaConfirm) {
+                $this->redirectWith('/user/editar', 'erro', 'As senhas não coincidem.');
+            }
+            $v = PasswordHelper::validate($senha);
+            if (!$v['valid']) {
+                $this->redirectWith('/user/editar', 'erro', 'Senha fraca: ' . implode(', ', $v['errors']) . '.');
             }
             $dados['senha'] = PasswordHelper::hash($senha);
         }
 
-            $this->usuario->update($id, $dados);
-
-            // Atualiza sessão
-            $_SESSION['usuario']['nome'] = $nome;
-            $_SESSION['usuario']['email'] = $email;
-
-            $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Dados atualizados com sucesso!'];
-            header('Location: ' . App::getBasePath() . '/user');
-            exit;
-
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Erro ao atualizar: ' . $e->getMessage()];
-            header('Location: ' . App::getBasePath() . '/user/editar');
-            exit;
+        $this->usuario->update($id, $dados);
+        if ($trocaSenha) {
+            session_regenerate_id(true);
         }
+        $this->log('atualizar_perfil', $trocaSenha ? 'Dados e senha atualizados' : 'Dados atualizados', 'usuario', $id);
+
+        $this->redirectWith('/user', 'sucesso', 'Dados atualizados com sucesso!');
     }
 }

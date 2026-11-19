@@ -8,24 +8,7 @@ $appName = App::getName();
 
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
-
-if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
-    header('Location: ' . $basePath . '/');
-    exit;
-}
-
-if (isset($_SESSION['flash'])) {
-    $flash = $_SESSION['flash'];
-    echo '<div class="flash-' . $flash['tipo'] . '">' . htmlspecialchars($flash['mensagem']) . '</div>';
-    unset($_SESSION['flash']);
-}
-
-$pasta = $_SERVER['DOCUMENT_ROOT'] . $basePath . '/backups/';
-if (!file_exists($pasta)) {
-    mkdir($pasta, 0777, true);
-}
-$backups = glob($pasta . '*.sql');
-rsort($backups);
+// $backups vem do MasterController::backup()
 ?>
 
 <section class="master-section animate-in">
@@ -93,9 +76,11 @@ rsort($backups);
                                                 <a href="<?= $basePath ?>/master/backup/download?arquivo=<?= urlencode(basename($backup)) ?>" class="btn btn-sm btn-download">
                                                     <i class="fas fa-download"></i>
                                                 </a>
-                                                <a href="<?= $basePath ?>/master/backup/excluir?arquivo=<?= urlencode(basename($backup)) ?>" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir este backup?')">
-                                                    <i class="fas fa-trash"></i>
-                                                </a>
+                                                <form action="<?= url('/master/backup/excluir') ?>" method="POST" style="display:inline" onsubmit="return confirm('Tem certeza que deseja excluir este backup?')">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="arquivo" value="<?= e(basename($backup)) ?>">
+                                                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                                                </form>
                                             </div>
                                         </td>
                                     </tr>

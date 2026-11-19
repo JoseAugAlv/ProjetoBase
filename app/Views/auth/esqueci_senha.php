@@ -9,12 +9,7 @@ $appName = App::getName();
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 
-if (isset($_SESSION['flash'])): ?>
-    <div class="flash-<?= $_SESSION['flash']['tipo'] ?>">
-        <?= htmlspecialchars($_SESSION['flash']['mensagem']) ?>
-    </div>
-    <?php unset($_SESSION['flash']); ?>
-<?php endif; ?>
+?>
 
 <section class="auth-section animate-in">
     <div class="auth-container">

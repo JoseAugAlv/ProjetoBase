@@ -1,10 +1,7 @@
 <?php
 // app/Controllers/NotificacaoController.php
 
-require_once __DIR__ . '/../Core/App.php';
-require_once __DIR__ . '/../Models/Notificacao.php';
-
-class NotificacaoController
+class NotificacaoController extends BaseController
 {
     private $notificacao;
 
@@ -13,73 +10,38 @@ class NotificacaoController
         $this->notificacao = new Notificacao();
     }
 
-    /**
-     * Lista notificações do usuário
-     */
     public function index()
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
-
-        $idUsuario = $_SESSION['usuario']['id'];
-        $notificacoes = $this->notificacao->getByUsuario($idUsuario);
-        $naoLidas = $this->notificacao->contarNaoLidas($idUsuario);
-
-        require '../app/Views/notificacoes/index.php';
+        $this->view('notificacoes/index', [
+            'notificacoes' => $this->notificacao->getByUsuario(Auth::id()),
+        ]);
     }
 
-    /**
-     * Marca notificação como lida (AJAX ou POST)
-     */
+    /** POST — só marca notificações do próprio usuário. */
     public function marcarLida()
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
-        }
+        $this->notificacao->marcarComoLida($this->inputInt('id_notificacao'), Auth::id());
 
-        if (isset($_POST['id_notificacao']) && !empty($_POST['id_notificacao'])) {
-            $this->notificacao->marcarComoLida((int) $_POST['id_notificacao']);
+        if (Router::isAjax()) {
+            $this->json(['ok' => true, 'total' => $this->notificacao->contarNaoLidas(Auth::id())]);
         }
-
-        header('Location: ' . App::getBasePath() . '/notificacoes');
-        exit;
+        $this->redirect('/notificacoes');
     }
 
-    /**
-     * Marca todas como lidas
-     */
+    /** POST */
     public function marcarTodasLidas()
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: ' . App::getBasePath() . '/login');
-            exit;
+        $this->notificacao->marcarTodasComoLidas(Auth::id());
+
+        if (Router::isAjax()) {
+            $this->json(['ok' => true, 'total' => 0]);
         }
-
-        $idUsuario = $_SESSION['usuario']['id'];
-        $this->notificacao->marcarTodasComoLidas($idUsuario);
-
-        header('Location: ' . App::getBasePath() . '/notificacoes');
-        exit;
+        $this->redirect('/notificacoes');
     }
 
-    /**
-     * Retorna o contador de notificações via AJAX
-     */
+    /** GET (JSON) — contador para o badge do menu. */
     public function contador()
     {
-        if (!isset($_SESSION['usuario'])) {
-            echo json_encode(['total' => 0]);
-            exit;
-        }
-
-        $idUsuario = $_SESSION['usuario']['id'];
-        $total = $this->notificacao->contarNaoLidas($idUsuario);
-        
-        header('Content-Type: application/json');
-        echo json_encode(['total' => $total]);
-        exit;
+        $this->json(['total' => $this->notificacao->contarNaoLidas(Auth::id())]);
     }
 }

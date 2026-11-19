@@ -1,34 +1,26 @@
 <?php
+// public/index.php — ponto de entrada único de todas as requisições.
 
-// 1. PRIMEIRO: Carregar o App para poder usar as configurações
-require_once __DIR__ . '/../app/Config/SessionConfig.php';
+require_once __DIR__ . '/../app/bootstrap.php';
+
+// Buffer de saída: permite trocar a página por uma tela de erro limpa se algo falhar no meio
+ob_start();
+
+// Sessão segura + usuário logado sincronizado com o banco
 SessionConfig::configure();
+Auth::sincronizar();
 
-require_once __DIR__ . '/../app/Core/App.php';
-App::init();
-
-// 2. AGORA podemos usar App::get() para configurações
-$debug = App::get('APP_ENV', 'production') !== 'production';
-ini_set('display_errors', $debug ? 1 : 0);
-error_reporting($debug ? E_ALL : 0);
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
-
-// 3. Carregar o resto do sistema
-require_once __DIR__ . '/../app/Config/config.php';
-require_once __DIR__ . '/../app/Config/database.php';
-require_once __DIR__ . '/../app/Core/Router.php';
-$router = new Router();
-
-require_once __DIR__ . '/../routes/web.php';
-
-// 4. HEADERS DE SEGURANÇA
+// Headers de segurança
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-
-if (App::get('APP_ENV') === 'production' && isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+header("Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'");
+if (App::isHttps()) {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 }
 
-$router->dispatch($_SERVER['REQUEST_URI']);
+$router = new Router();
+require_once ROOT_PATH . '/routes/web.php';
+
+$router->dispatch($_SERVER['REQUEST_URI'] ?? '/');

@@ -1,48 +1,34 @@
 <?php
 // app/Helpers/ViewHelper.php
+// Formatação para views. Para escapar texto prefira a função curta e($valor).
 
 class ViewHelper
 {
-    /**
-     * Retorna o campo CSRF para formulários
-     */
-    public static function csrfField()
+    public static function csrfField(): string
     {
-        require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
         return CsrfMiddleware::field();
     }
 
-    /**
-     * Escapa HTML para saída segura
-     */
-    public static function escape($string)
+    public static function escape($string): string
     {
-        return htmlspecialchars($string, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        return e($string);
     }
 
-    /**
-     * Formata data
-     */
-    public static function formatDate($date, $format = 'd/m/Y H:i')
+    public static function formatDate($date, $format = 'd/m/Y H:i'): string
     {
-        if (empty($date) || $date === '0000-00-00 00:00:00') {
+        if (empty($date) || strpos((string) $date, '0000-00-00') === 0) {
             return '-';
         }
-        return date($format, strtotime($date));
+        $ts = strtotime((string) $date);
+        return $ts ? date($format, $ts) : '-';
     }
 
-    /**
-     * Formata valor monetário
-     */
-    public static function formatMoney($value)
+    public static function formatMoney($value): string
     {
-        return 'R$ ' . number_format($value, 2, ',', '.');
+        return 'R$ ' . number_format((float) $value, 2, ',', '.');
     }
 
-    /**
-     * Gera badge de status
-     */
-    public static function statusBadge($status)
+    public static function statusBadge($status): string
     {
         $classes = [
             'aprovado' => 'badge-success',
@@ -54,10 +40,10 @@ class ViewHelper
             'inativo' => 'badge-danger',
             'cancelado' => 'badge-secondary',
             'planejamento' => 'badge-info',
-            'finalizado' => 'badge-secondary'
+            'finalizado' => 'badge-secondary',
         ];
 
-        $class = $classes[strtolower($status)] ?? 'badge-secondary';
-        return "<span class='badge {$class}'>" . ucfirst($status) . "</span>";
+        $class = $classes[strtolower((string) $status)] ?? 'badge-secondary';
+        return "<span class='badge {$class}'>" . e(ucfirst((string) $status)) . '</span>';
     }
 }

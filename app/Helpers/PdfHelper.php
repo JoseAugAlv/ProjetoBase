@@ -1,7 +1,5 @@
 <?php
-// app/Helpers/pdfHelper.php
-
-require_once __DIR__ . '/../../vendor/autoload.php';
+// app/Helpers/PdfHelper.php
 
 class PdfHelper
 {

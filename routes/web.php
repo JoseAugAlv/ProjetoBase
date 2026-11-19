@@ -1,24 +1,31 @@
 <?php
-// routes/web.php
+// routes/web.php — todas as rotas do sistema.
+//
+// $router->get('/caminho', 'Controller@metodo', [perfis]);
+// $router->post('/caminho', 'Controller@metodo', [perfis]);   // CSRF validado automaticamente
+// $router->crud('produtos', 'ProdutoController', [perfis]);    // index, criar, salvar, editar, atualizar, excluir
+//
+// Perfis: Perfil::MASTER (1), Perfil::ADMIN (2), Perfil::OPERADOR (3), Perfil::USUARIO (4)
+// Sem perfis = página pública.
 
-require_once __DIR__ . '/../app/Helpers/menuHelper.php';
+$M = Perfil::MASTER;
+$A = Perfil::ADMIN;
+$O = Perfil::OPERADOR;
+$U = Perfil::USUARIO;
+$logados = [$M, $A, $O, $U];
 
-// CARREGA CONFIGURAÇÕES DE MÓDULOS
-$modulesConfig = __DIR__ . '/../app/Config/modules.php';
-if (file_exists($modulesConfig)) {
-    $modules = require $modulesConfig;
-    $modulos = $modules['modules'] ?? [];
-} else {
-    $modulos = [];
-}
-
+// ------------------------------------------------------------
 // PÁGINAS PÚBLICAS
+// ------------------------------------------------------------
 $router->get('/', 'HomeController@index');
+$router->get('/home', 'HomeController@index');
 $router->get('/sobre', 'SobreController@index');
 $router->get('/termos', 'TermosController@index');
-$router->get('/home', 'HomeController@index');
+$router->get('/tutorial', 'TutorialController@index');
 
+// ------------------------------------------------------------
 // AUTENTICAÇÃO
+// ------------------------------------------------------------
 $router->get('/login', 'AuthController@index');
 $router->post('/login', 'AuthController@login');
 $router->get('/logout', 'AuthController@logout');
@@ -29,70 +36,78 @@ $router->post('/login/salvar', 'AuthController@salvar');
 $router->get('/auth/verificar', 'AuthController@verificar');
 $router->get('/auth/re-enviar', 'AuthController@reenviarVerificacao');
 
+// Login com Google (só funciona com GOOGLE_CLIENT_ID/SECRET no .env)
+$router->get('/auth/google', 'AuthController@google');
+$router->get('/auth/google/callback', 'AuthController@googleCallback');
+
 $router->get('/auth/esqueci-senha', 'AuthController@esqueciSenha');
 $router->post('/auth/enviar-token', 'AuthController@enviarToken');
 $router->get('/auth/redefinir', 'AuthController@redefinir');
 $router->post('/auth/redefinir-senha', 'AuthController@redefinirSenha');
 
-// ============================================================
-// REMOVIDO: Rotas de primeiro acesso
-// $router->get('/auth/primeiro-acesso', 'AuthController@primeiroAcesso');
-// $router->post('/auth/completar-primeiro-acesso', 'AuthController@completarPrimeiroAcesso');
-// ============================================================
+// ------------------------------------------------------------
+// MINHA CONTA (qualquer usuário logado)
+// ------------------------------------------------------------
+$router->get('/user', 'UserController@index', $logados);
+$router->get('/user/editar', 'UserController@editar', $logados);
+$router->post('/user/atualizar', 'UserController@atualizar', $logados);
 
-// USUÁRIO (próprio perfil)
-$router->get('/user', 'UserController@index', [1, 2, 3, 4]);
-$router->get('/user/editar', 'UserController@editar', [1, 2, 3, 4]);
-$router->post('/user/atualizar', 'UserController@atualizar', [1, 2, 3, 4]);
+// ------------------------------------------------------------
+// NOTIFICAÇÕES
+// ------------------------------------------------------------
+$router->get('/notificacoes', 'NotificacaoController@index', $logados);
+$router->get('/notificacoes/contador', 'NotificacaoController@contador', $logados);
+$router->post('/notificacoes/marcar-lida', 'NotificacaoController@marcarLida', $logados);
+$router->post('/notificacoes/marcar-todas-lidas', 'NotificacaoController@marcarTodasLidas', $logados);
 
-// GERENCIAR USUÁRIOS
-$router->get('/usuarios', 'UsuarioController@index', [1, 2]);
-$router->get('/usuarios/criar', 'UsuarioController@criar', [1, 2]);
-$router->post('/usuarios/salvar', 'UsuarioController@salvar', [1, 2]);
+// ------------------------------------------------------------
+// GESTÃO DE USUÁRIOS (Master e Admin; hierarquia checada no controller)
+// ------------------------------------------------------------
+$router->get('/usuarios', 'UsuarioController@index', [$M, $A]);
+$router->get('/usuarios/criar', 'UsuarioController@criar', [$M, $A]);
+$router->post('/usuarios/salvar', 'UsuarioController@salvar', [$M, $A]);
+$router->get('/usuarios/editar', 'UsuarioController@editar', [$M, $A]);
+$router->post('/usuarios/atualizar', 'UsuarioController@atualizar', [$M, $A]);
+$router->post('/usuarios/excluir', 'UsuarioController@excluir', [$M, $A]);
+$router->post('/usuarios/atribuir-perfil', 'UsuarioController@atribuirPerfil', [$M, $A]);
 
-$router->get('/usuarios/editar', 'UsuarioController@editar', [1, 2]);
-$router->post('/usuarios/atualizar', 'UsuarioController@atualizar', [1, 2]);
+$router->get('/dashboard', 'HomeController@dashboard', [$M, $A]);
 
-$router->get('/usuarios/excluir', 'UsuarioController@excluir', [1]);
+// ------------------------------------------------------------
+// RELATÓRIOS
+// ------------------------------------------------------------
+$router->get('/relatorios/usuarios', 'RelatoriosController@usuarios', [$M, $A]);
+$router->get('/relatorios/exportar', 'RelatoriosController@exportar', [$M, $A]);
+$router->get('/relatorios/pdf', 'RelatoriosController@pdf', [$M, $A]);
 
-$router->post('/usuarios/atribuir-perfil', 'UsuarioController@atribuirPerfilMaster', [1]);
-$router->post('/usuarios/atribuir-perfil-admin', 'UsuarioController@atribuirPerfilAdmin', [2]);
+// ------------------------------------------------------------
+// OPERADOR
+// ------------------------------------------------------------
+$router->get('/operador/atividades', 'OperadorController@atividades', [$O]);
 
-// ============================================================
-// REMOVIDO: Rota de pendentes
-// $router->get('/usuarios/pendentes', 'UsuarioController@pendentes', [1]);
-// ============================================================
-
-// LOGS (apenas se módulo ativo)
-if ($modulos['logs'] ?? false) {
-    $router->get('/logs', 'LogController@index', [1]);
-}
-
-// NOTIFICAÇÕES (todos logados)
-$router->get('/notificacoes', 'NotificacaoController@index', [1, 2, 3, 4]);
-$router->post('/notificacoes/marcar-lida', 'NotificacaoController@marcarLida', [1, 2, 3, 4]);
-$router->post('/notificacoes/marcar-todas-lidas', 'NotificacaoController@marcarTodasLidas', [1, 2, 3, 4]);
-$router->get('/notificacoes/contador', 'NotificacaoController@contador', [1, 2, 3, 4]);
-
+// ------------------------------------------------------------
 // MASTER
-$router->get('/master', 'MasterController@index', [1]);
+// ------------------------------------------------------------
+$router->get('/master', 'MasterController@index', [$M]);
+$router->get('/master/configuracoes', 'MasterController@configuracoes', [$M]);
+$router->get('/master/usuarios', 'MasterController@usuarios', [$M]);
 
-if ($modulos['backup'] ?? false) {
-    $router->get('/master/backup', 'MasterController@backup', [1]);
-    $router->post('/master/backup/exportar', 'MasterController@exportarBackup', [1]);
-    $router->get('/master/backup/download', 'MasterController@downloadBackup', [1]);
-    $router->get('/master/backup/excluir', 'MasterController@excluirBackup', [1]);
+if (MenuHelper::isModuleEnabled('logs')) {
+    $router->get('/logs', 'LogController@index', [$M]);
 }
 
-$router->get('/master/configuracoes', 'MasterController@configuracoes', [1]);
-$router->get('/master/usuarios', 'MasterController@usuarios', [1]);
-$router->post('/master/atribuir-perfil', 'MasterController@atribuirPerfil', [1]);
+if (MenuHelper::isModuleEnabled('backup')) {
+    $router->get('/master/backup', 'MasterController@backup', [$M]);
+    $router->post('/master/backup/exportar', 'MasterController@exportarBackup', [$M]);
+    $router->get('/master/backup/download', 'MasterController@downloadBackup', [$M]);
+    $router->post('/master/backup/excluir', 'MasterController@excluirBackup', [$M]);
+}
 
-// RELATÓRIOS (apenas Admin)
-$router->get('/relatorios/usuarios', 'RelatoriosController@usuarios', [2]);
-$router->get('/relatorios/exportar', 'RelatoriosController@exportar', [2]);
-$router->get('/relatorios/pdf', 'RelatoriosController@pdf', [2]);
-$router->get('/dashboard', 'HomeController@dashboard', [1, 2]);
+// ------------------------------------------------------------
+// CRUD DE EXEMPLO (tabela `exemplo`) — apague quando não precisar
+// ------------------------------------------------------------
+$router->crud('exemplo', 'ExemploController', [$M, $A]);
 
-// pagina de tutorial
-$router->get('/tutorial', 'TutorialController@index');
+// ------------------------------------------------------------
+// SUAS ROTAS (php bin/console criar:pagina / criar:crud mostram a linha para colar aqui)
+// ------------------------------------------------------------
